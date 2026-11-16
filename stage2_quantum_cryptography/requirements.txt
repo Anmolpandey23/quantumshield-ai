@@ -1,0 +1,10 @@
+# Tested with Python 3.12 (3.11 also works). Exact versions = same behaviour on every teammate's laptop.
+qiskit==2.6.1
+qiskit-aer==0.18.0
+cryptography==46.0.6
+numpy==2.4.4
+matplotlib==3.10.8
+kyber-py==1.2.0
+dilithium-py==1.5.1
+pycryptodome==4.2.0
+pytest==9.1.1

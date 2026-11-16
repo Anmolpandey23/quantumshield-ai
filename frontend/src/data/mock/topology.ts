@@ -1,0 +1,42 @@
+import type { Topology } from "@/types/quantumshield";
+
+/** DEMO DATA — sample network topology. IPs use RFC 5737 documentation ranges. */
+export const mockTopology: Topology = {
+  nodes: [
+    { id: "inet", label: "Internet Uplink", type: "gateway", status: "healthy", layer: "edge", x: 6, y: 30, ip: "203.0.113.1", load: 62 },
+    { id: "fw-1", label: "Edge Firewall A", type: "firewall", status: "healthy", layer: "edge", x: 20, y: 18, ip: "10.0.0.2", load: 48 },
+    { id: "fw-2", label: "Edge Firewall B", type: "firewall", status: "warning", layer: "edge", x: 20, y: 42, ip: "10.0.0.3", load: 81 },
+    { id: "pqc-gw", label: "PQC Gateway", type: "pqc", status: "healthy", layer: "core", x: 36, y: 30, ip: "10.0.1.10", load: 55 },
+    { id: "core-1", label: "Core Router 1", type: "router", status: "healthy", layer: "core", x: 50, y: 14, ip: "10.0.1.1", load: 44 },
+    { id: "core-2", label: "Core Router 2", type: "router", status: "healthy", layer: "core", x: 50, y: 46, ip: "10.0.1.2", load: 39 },
+    { id: "ai", label: "AI Threat Engine", type: "ai", status: "healthy", layer: "service", x: 50, y: 30, ip: "10.0.2.5", load: 71 },
+    { id: "sw-a", label: "Access Switch A", type: "switch", status: "healthy", layer: "service", x: 66, y: 10, ip: "10.0.3.1", load: 33 },
+    { id: "sw-b", label: "Access Switch B", type: "switch", status: "compromised", layer: "service", x: 66, y: 30, ip: "10.0.3.2", load: 92 },
+    { id: "sw-c", label: "Access Switch C", type: "switch", status: "healthy", layer: "service", x: 66, y: 50, ip: "10.0.3.3", load: 28 },
+    { id: "app", label: "App Cluster", type: "server", status: "healthy", layer: "endpoint", x: 84, y: 8, ip: "10.0.4.20", load: 58 },
+    { id: "db", label: "Secure Datastore", type: "database", status: "healthy", layer: "endpoint", x: 84, y: 24, ip: "10.0.4.30", load: 46 },
+    { id: "iot", label: "IoT Segment", type: "iot", status: "healing", layer: "endpoint", x: 84, y: 40, ip: "10.0.5.0/24", load: 67 },
+    { id: "soc", label: "SOC Console", type: "soc", status: "healthy", layer: "endpoint", x: 84, y: 54, ip: "10.0.6.4", load: 22 },
+  ],
+  edges: [
+    { from: "inet", to: "fw-1" },
+    { from: "inet", to: "fw-2", status: "congested" },
+    { from: "fw-1", to: "pqc-gw" },
+    { from: "fw-2", to: "pqc-gw" },
+    { from: "pqc-gw", to: "core-1" },
+    { from: "pqc-gw", to: "core-2" },
+    { from: "pqc-gw", to: "ai" },
+    { from: "core-1", to: "ai" },
+    { from: "core-2", to: "ai" },
+    { from: "core-1", to: "sw-a" },
+    { from: "core-1", to: "sw-b", status: "down" },
+    { from: "core-2", to: "sw-b" },
+    { from: "core-2", to: "sw-c" },
+    { from: "sw-a", to: "app" },
+    { from: "sw-a", to: "db" },
+    { from: "sw-b", to: "db", status: "rerouted" },
+    { from: "sw-b", to: "iot" },
+    { from: "sw-c", to: "iot" },
+    { from: "sw-c", to: "soc" },
+  ],
+};

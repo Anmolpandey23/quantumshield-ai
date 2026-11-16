@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pipeline_event",
+  "title": "Event sent to the dashboard (Stage 4) for every processed node",
+  "type": "object",
+  "required": [
+    "contract_version",
+    "timestamp",
+    "node_id",
+    "decision",
+    "stage1",
+    "stage2",
+    "stage3_command",
+    "command_verified"
+  ],
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "no_action",
+        "aborted_no_command",
+        "command_issued",
+        "command_rejected",
+        "pending_human_approval"
+      ]
+    },
+    "stage1": {
+      "type": "object"
+    },
+    "stage2": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "stage3_command": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "command_verified": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "pending_approval": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Optional. Present when decision is pending_human_approval: {approval_id, node_id, action, reason}."
+    },
+    "node_status": {
+      "type": "string",
+      "enum": [
+        "online",
+        "monitored",
+        "isolated"
+      ],
+      "description": "Optional. Status of the node after this event."
+    },
+    "rekeyed": {
+      "type": "boolean",
+      "description": "Optional. True when a reconnected node received fresh keys."
+    },
+    "policy": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Optional. Stage 3 decision details: {action, proposed, source, reason, requires_approval}."
+    },
+    "node_applied": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Optional. True when the node agent verified and applied the command."
+    }
+  }
+}

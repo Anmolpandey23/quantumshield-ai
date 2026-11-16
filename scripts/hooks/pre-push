@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Stops direct pushes to main. Use a branch + pull request instead.
+# Leader's very first push only:  ALLOW_MAIN_PUSH=1 git push -u origin main
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ] && [ "${ALLOW_MAIN_PUSH:-0}" != "1" ]; then
+    echo "BLOCKED: do not push directly to main."
+    echo "  git checkout -b stageN-your-task && git push -u origin stageN-your-task, then open a pull request."
+    exit 1
+  fi
+done
+exit 0

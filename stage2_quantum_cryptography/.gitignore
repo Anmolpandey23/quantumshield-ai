@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+.venv/
+*.egg-info/
+# Secrets and local files
+.env
+*.pem
+*.key
+.vscode/
+.idea/
+.DS_Store
+# Keep results/ (figures + CSV) in Git on purpose; ignore only big temp files
+results/run_log.txt

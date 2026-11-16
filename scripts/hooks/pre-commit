@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Blocks commits that contain secrets, key files, or huge files.
+# Enable once per clone:  git config core.hooksPath scripts/hooks
+fail=0
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+
+# 1) forbidden file names
+for f in $staged; do
+  case "$f" in
+    scripts/hooks/*) continue ;;
+    .env.example|*/.env.example) continue ;;       # templates without secrets are fine
+    *.pem|*.key|*.p12|*.pfx|.env|*/.env|.env.*|*/.env.*|id_rsa|id_ed25519|*/id_rsa|*/id_ed25519)
+      echo "BLOCKED: '$f' looks like a secret or key file."; fail=1 ;;
+  esac
+done
+
+# 2) files larger than 10 MB (datasets and model weights do not belong in Git)
+for f in $staged; do
+  [ -f "$f" ] || continue
+  size=$(wc -c < "$f")
+  if [ "$size" -gt 10485760 ]; then
+    echo "BLOCKED: '$f' is $((size/1048576)) MB. Keep datasets/models out of Git (share via Drive)."; fail=1
+  fi
+done
+
+# 3) secret patterns in the lines being added
+added=$(git diff --cached -U0 -- . ':!scripts/hooks' | grep -E '^\+' | grep -v '^+++')
+if echo "$added" | grep -E -q 'ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,}'; then
+  echo "BLOCKED: a token or private key pattern was found in your changes."; fail=1
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo; echo "Commit stopped. Remove the secret/file, then commit again."
+  echo "If a real secret was already typed into a file: revoke it NOW (see docs guide, Part D)."
+  exit 1
+fi
+exit 0

@@ -1,0 +1,83 @@
+{
+  "quick": false,
+  "machine": {
+    "platform": "Linux x86_64, 1 CPUs",
+    "python": "3.12.3",
+    "qiskit": "2.6.1"
+  },
+  "qrng": {
+    "bytes": 4096,
+    "monobit_p": 0.808,
+    "chi2_z": -0.753,
+    "serial_r": -0.00363,
+    "all_pass": true
+  },
+  "qber": {
+    "clean_qber_mean": 0.0,
+    "eve_full_qber_mean": 0.2441,
+    "eve_full_detect_rate": 1.0,
+    "trials_per_point": 20,
+    "qubits_per_run": 1024
+  },
+  "detection": {
+    "detection_rate_by_qubits": {
+      "16": 0.51,
+      "32": 0.66,
+      "64": 0.8,
+      "128": 0.96,
+      "256": 1.0,
+      "512": 1.0
+    }
+  },
+  "sizes": {
+    "X25519 key share": 32,
+    "ML-KEM-768 public key": 1184,
+    "ML-KEM-768 ciphertext": 1088,
+    "ML-KEM-768 secret key": 2400,
+    "Ed25519 public key": 32,
+    "Ed25519 signature": 64,
+    "RSA-2048 public key (DER)": 294,
+    "RSA-2048 signature": 256,
+    "ML-DSA-65 public key": 1952,
+    "ML-DSA-65 secret key": 4032,
+    "ML-DSA-65 signature": 3309
+  },
+  "timing_ms": {
+    "ML-KEM keygen": 2.63,
+    "ML-KEM encaps": 3.77,
+    "ML-KEM decaps": 4.97,
+    "ML-DSA keygen": 7.52,
+    "ML-DSA sign": 38.95,
+    "ML-DSA verify": 8.3,
+    "X25519 keygen": 0.04,
+    "X25519 exchange": 0.04,
+    "Ed25519 sign": 0.04,
+    "Ed25519 verify": 0.1,
+    "RSA-2048 keygen": 32.16
+  },
+  "pipeline": {
+    "runs": 20,
+    "clean_established": 20,
+    "eve_aborted": 20,
+    "mean_total_ms_clean": 701.4,
+    "phase_mean_ms": {
+      "qrng_ms": 9.2,
+      "bb84_ms": 613.7,
+      "ml_kem_ms": 13.7,
+      "hkdf_aes_ms": 0.1,
+      "ml_dsa_ms": 64.5
+    }
+  },
+  "attacks": {
+    "Edited message under a valid signature": true,
+    "Edited signature bytes": true,
+    "Signature checked with the wrong key": true,
+    "Replayed command": true,
+    "Forged 'reconnect' order": true,
+    "Command from an attacker's key": true,
+    "Stale command (old timestamp)": true,
+    "Action outside the allowlist": true,
+    "Edited encrypted traffic (AES-GCM)": true,
+    "Edited ML-KEM ciphertext": true
+  }
+}

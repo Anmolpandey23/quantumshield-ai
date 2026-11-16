@@ -1,0 +1,5 @@
+# Everything needed to run the whole project (all four stages) on one machine.
+-r stage2_quantum_cryptography/requirements.txt
+-r stage1_ai_threat_prediction/requirements.txt
+-r stage3_self_healing/requirements.txt
+-r backend_dashboard/requirements.txt

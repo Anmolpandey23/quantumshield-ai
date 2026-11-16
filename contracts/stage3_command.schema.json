@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage3_command",
+  "title": "Stage 3 command, signed with ML-DSA (see stage2 commands.py)",
+  "type": "object",
+  "required": ["payload", "signature"],
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": ["node_id", "action", "issued_at", "nonce"],
+      "properties": {
+        "node_id": {"type": "string"},
+        "action": {"enum": ["isolate", "monitor", "reconnect"]},
+        "issued_at": {"type": "number"},
+        "nonce": {"type": "string", "pattern": "^[0-9a-f]{32}$"}
+      }
+    },
+    "signature": {"type": "string", "pattern": "^[0-9a-f]+$"}
+  }
+}

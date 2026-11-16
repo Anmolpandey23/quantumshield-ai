@@ -1,0 +1,2 @@
+{"contract_version": "1.0", "node_id": "192.168.1.14", "threat_label": "DDoS", "confidence": 0.94, "anomaly_score": 0.87, "risk_score_node": 0.91,
+ "explanation": ["unusual packet rate", "spike in SYN flag ratio"]}

@@ -1,0 +1,11 @@
+# Replace the usernames, then commit. GitHub asks these people to review changes to their folders.
+# (Reviews are only *required* if branch protection is available on your plan; see the guide.)
+/stage1_ai_threat_prediction/        @member1-github-username
+/stage2_quantum_cryptography/        @member3-github-username
+/stage3_self_healing/                @member2-github-username
+/backend_dashboard/                  @member4-github-username
+/frontend/                           @member4-github-username
+/integration/                        @member4-github-username @leader-github-username
+/contracts/                          @member1-github-username @member2-github-username @member3-github-username @member4-github-username
+/.github/                            @leader-github-username
+/scripts/                            @leader-github-username

@@ -1,0 +1,8 @@
+# Stage 1: AI threat prediction. Python 3.11 or 3.12.
+# Torch: the default pip wheel works on CPU and GPU. For a smaller CPU-only wheel see docs/DATASET_AND_TRAINING.md
+torch>=2.2
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4
+jsonschema==4.26.0
+pytest==9.1.1

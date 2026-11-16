@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>QuantumShield AI: Stage 2 live defense</title>
+<style>
+:root{color-scheme:dark;box-sizing:border-box;--bg:#040a13;--pn:#0a1626;--ln:#14416a;--cy:#3ee6ff;--gd:#ffc857;--rd:#ff4d5e;--gn:#35f2a0;--tx:#cfefff;--mu:#6f93b0;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:13px/1.45 ui-monospace,"Cascadia Code",Consolas,Menlo,monospace;padding:12px}
+header{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;border-bottom:1px solid var(--ln);padding-bottom:8px;margin-bottom:10px}
+h1{margin:0;font-size:15px;letter-spacing:.18em;color:var(--cy);font-weight:500}
+#st{padding:3px 12px;border:1px solid currentColor;letter-spacing:.14em;font-size:12px}
+.ok{color:var(--gn)}.warn{color:var(--gd)}.bad{color:var(--rd)}.info{color:var(--cy)}
+.wrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:10px}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.pn{background:var(--pn);border:1px solid var(--ln);padding:8px 10px;min-width:0}
+.pn h2{margin:0 0 6px;font-size:11px;letter-spacing:.16em;color:var(--mu);font-weight:400}
+canvas{display:block;width:100%;aspect-ratio:4/3;min-height:300px;background:#050d19;border:1px solid var(--ln)}
+#bb{display:flex;gap:2px;overflow-x:auto}
+.lb{display:flex;flex-direction:column;gap:2px;color:var(--mu);font-size:10px;text-align:right;padding-right:4px}
+.col{display:flex;flex-direction:column;gap:2px;opacity:.12;transition:opacity .25s}
+.col.on{opacity:1}
+.c,.lb div{height:20px;line-height:20px;text-align:center;min-width:20px}
+.c{background:#0d2238;border:1px solid #17456f}
+.c.m{border-color:var(--gn);color:var(--gn)}.c.x{border-color:var(--rd);color:var(--rd);background:#2a0d14}
+.c.e{color:var(--rd)}
+.gw{position:relative;height:16px;background:#0d2238;border:1px solid var(--ln);margin:8px 0 4px}
+#gf{height:100%;width:0;background:var(--gn);transition:width .8s,background .4s}
+#gt{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--gd)}
+#log{height:250px;overflow-y:auto;font-size:12px}
+#log div{padding:1px 0;border-bottom:1px solid #0f2a44}
+#log b{color:var(--mu);font-weight:400}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+button,select{font:inherit;color:var(--cy);background:#07182b;border:1px solid var(--ln);padding:6px 10px;cursor:pointer;min-height:32px}
+button:hover{border-color:var(--cy)}
+button.go{color:var(--bg);background:var(--cy)}
+.met{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px;margin-top:10px}
+.met div{background:var(--pn);border:1px solid var(--ln);padding:6px 8px}
+.met small{display:block;color:var(--mu);font-size:10px;letter-spacing:.12em}
+.met span{font-size:15px;color:var(--cy)}
+footer{margin-top:10px;color:var(--mu);font-size:11px}
+</style></head><body>
+<header><h1>QUANTUMSHIELD AI · STAGE 2 · QUANTUM-SAFE DEFENSE</h1><div id="st" class="ok">ALL SYSTEMS NOMINAL</div></header>
+<div class="wrap">
+<div class="pn"><h2>NETWORK · 4 SYSTEMS</h2><canvas id="cv"></canvas></div>
+<div>
+<div class="pn"><h2 id="bh">BB84 QUANTUM KEY EXCHANGE · waiting</h2><div id="bb"></div>
+<div class="gw"><div id="gf"></div><div id="gt"></div></div><div id="gv" class="info">QBER · threshold marker at 11%</div></div>
+<div class="pn" style="margin-top:10px"><h2>EVENT LOG</h2><div id="log"></div></div>
+</div></div>
+<div class="bar"><button class="go" id="b0">Run everything</button><button id="b1">1 DDoS and self-heal</button><button id="b2">2 Eavesdropper</button><button id="b3">3 Forged command</button><button id="b4">4 Replay, stale, forbidden</button><button id="b5">5 Tampered data</button><button id="b6">Reset</button>
+<label class="info">speed <select id="sp"><option value="0.6">0.6×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+<div class="met"><div><small>KEY ID</small><span id="m1">–</span></div><div><small>ML-KEM CIPHERTEXT</small><span id="m2">–</span></div><div><small>ML-DSA SIGNATURE</small><span id="m3">–</span></div><div><small>HANDSHAKE TIME</small><span id="m4">–</span></div><div><small>LAST QBER</small><span id="m5">–</span></div></div>
+<footer id="ft"></footer>
+<script>
+const D={"meta":{"generated":"2026-11-09 11:30 UTC","machine":"Linux x86_64, Python 3.12.3, Qiskit 2.6.1","threshold":0.11,"node":"192.168.1.14"},"clean":{"s2":{"status":"secure_channel_established","qber":0.0,"key_gen_time_ms":564.69,"timings_ms":{"qrng_ms":27.18,"bb84_ms":478.26,"ml_kem_ms":9.8,"hkdf_aes_ms":0.97,"ml_dsa_ms":48.44},"sizes_bytes":{"kem_public_key":1184,"kem_ciphertext":1088,"sig_public_key":1952,"signature":3309},"key_id":"b86708b7"},"bb84":{"cells":[{"a":1,"ab":0,"bb":1,"r":0,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":0,"ab":0,"bb":0,"r":0,"e":false},{"a":1,"ab":0,"bb":1,"r":1,"e":false},{"a":0,"ab":1,"bb":1,"r":0,"e":false},{"a":0,"ab":1,"bb":0,"r":1,"e":false},{"a":0,"ab":1,"bb":1,"r":0,"e":false},{"a":0,"ab":1,"bb":1,"r":0,"e":false},{"a":1,"ab":0,"bb":0,"r":1,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":1,"ab":0,"bb":0,"r":1,"e":false},{"a":0,"ab":0,"bb":0,"r":0,"e":false},{"a":1,"ab":1,"bb":0,"r":1,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":1,"ab":0,"bb":1,"r":0,"e":false}],"qber":0.0,"n":1024,"sifted":476,"tested":119,"detected":false}},"eve":{"s2":{"status":"aborted_eavesdrop_detected","qber":0.2829,"key_gen_time_ms":919.69,"timings_ms":{"qrng_ms":6.0,"bb84_ms":913.68},"key_id":null},"bb84":{"cells":[{"a":0,"ab":1,"bb":1,"r":0,"e":true},{"a":1,"ab":1,"bb":1,"r":1,"e":true},{"a":0,"ab":0,"bb":0,"r":1,"e":true},{"a":1,"ab":1,"bb":1,"r":1,"e":true},{"a":0,"ab":0,"bb":1,"r":1,"e":true},{"a":0,"ab":0,"bb":0,"r":0,"e":true},{"a":1,"ab":0,"bb":0,"r":1,"e":true},{"a":0,"ab":1,"bb":0,"r":0,"e":true},{"a":1,"ab":0,"bb":0,"r":0,"e":true},{"a":1,"ab":1,"bb":0,"r":0,"e":true},{"a":0,"ab":1,"bb":1,"r":1,"e":true},{"a":1,"ab":0,"bb":1,"r":1,"e":true},{"a":0,"ab":1,"bb":0,"r":0,"e":true},{"a":1,"ab":1,"bb":1,"r":0,"e":true},{"a":0,"ab":0,"bb":1,"r":0,"e":true},{"a":0,"ab":1,"bb":1,"r":0,"e":true}],"qber":0.2126,"n":1024,"sifted":509,"tested":127,"detected":true}},"heal":{"s2":{"status":"secure_channel_established","qber":0.0,"key_gen_time_ms":569.97,"timings_ms":{"qrng_ms":5.67,"bb84_ms":472.57,"ml_kem_ms":9.24,"hkdf_aes_ms":0.13,"ml_dsa_ms":82.33},"sizes_bytes":{"kem_public_key":1184,"kem_ciphertext":1088,"sig_public_key":1952,"signature":3309},"key_id":"c3852948"},"bb84":{"cells":[{"a":0,"ab":0,"bb":1,"r":0,"e":false},{"a":1,"ab":0,"bb":1,"r":0,"e":false},{"a":1,"ab":1,"bb":0,"r":1,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":1,"ab":0,"bb":0,"r":1,"e":false},{"a":0,"ab":0,"bb":1,"r":1,"e":false},{"a":1,"ab":1,"bb":0,"r":0,"e":false},{"a":0,"ab":0,"bb":0,"r":0,"e":false},{"a":1,"ab":1,"bb":0,"r":1,"e":false},{"a":1,"ab":0,"bb":0,"r":1,"e":false},{"a":1,"ab":0,"bb":1,"r":0,"e":false},{"a":1,"ab":0,"bb":1,"r":1,"e":false},{"a":1,"ab":1,"bb":1,"r":1,"e":false},{"a":0,"ab":0,"bb":1,"r":0,"e":false},{"a":0,"ab":0,"bb":1,"r":0,"e":false},{"a":1,"ab":0,"bb":0,"r":1,"e":false}],"qber":0.0,"n":1024,"sifted":509,"tested":127,"detected":false}},"cmd":{"isolate":{"verify":[true,"ok"],"sig_bytes":3309,"sign_ms":150.6,"verify_ms":7.1,"nonce":"77dc7a11"},"replay":[false,"replay_detected"],"forged":[false,"bad_signature"],"stale":[false,"stale_command"],"bad_action":[false,"action_not_allowed"],"attacker":[false,"bad_signature"],"reconnect":[true,"ok"]},"traffic":{"aes_tamper":"InvalidTag","kem_tamper_differs":true}};
+const $=s=>document.querySelector(s),cv=$('#cv'),cx=cv.getContext('2d');
+let W=300,H=225,dpr=1,speed=1,run=0,P=[],lastSp=0;
+const S={st:{A:'ok',B:'ok',C:'ok'},ln:{A:'secure',B:'secure',C:'secure'},eve:0,att:0,shield:0,flash:0};
+const NM={A:['SYSTEM 2','NODE A'],B:['SYSTEM 3','NODE B'],C:['SYSTEM 4','NODE C']};
+const COL={ok:'#3ee6ff',attack:'#ff4d5e',isolated:'#7b8aa0',healing:'#ffc857'};
+const pos=()=>({K:{x:W*.5,y:H*.5},A:{x:W*.2,y:H*.74},B:{x:W*.8,y:H*.26},C:{x:W*.78,y:H*.78},X:{x:W*.3,y:H*.09}});
+function size(){const r=cv.getBoundingClientRect();dpr=devicePixelRatio||1;W=r.width||300;H=r.height||225;cv.width=W*dpr;cv.height=H*dpr}
+addEventListener('resize',size);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms/speed));
+async function w(ms){const r=run;await sleep(ms);if(r!==run)throw'stop'}
+const pct=v=>(v*100).toFixed(1)+'%';
+function log(t,c){const l=$('#log'),d=document.createElement('div'),n=new Date().toLocaleTimeString([], {hour12:false});d.className=c||'';d.innerHTML='<b>'+n+'</b> '+t;l.appendChild(d);while(l.children.length>80)l.removeChild(l.firstChild);l.scrollTop=l.scrollHeight}
+function status(t,c){const e=$('#st');e.textContent=t;e.className=c}
+function met(i,v){$('#m'+i).textContent=v}
+function fire(a,b,c,n,d){const p=pos(),now=performance.now();for(let i=0;i<n;i++)P.push({a:p[a],b:p[b],t:now+i*(d/n)*.7,d:d,c:c})}
+function gauge(q){const g=$('#gf');g.style.width=Math.min(100,q*100/0.4*1)+'%';g.style.background=q>D.meta.threshold?'var(--rd)':'var(--gn)';$('#gv').textContent='QBER '+pct(q)+'  ·  abort above '+pct(D.meta.threshold);$('#gv').className=q>D.meta.threshold?'bad':'ok'}
+$('#gt').style.left=(D?D.meta.threshold/0.4*100:27.5)+'%';
+async function bb(v,eve,title){
+ $('#bh').textContent='BB84 QUANTUM KEY EXCHANGE · '+title;gauge(0);
+ const rows=['A','+/×',eve?'EVE':'','+/×','B','✓'],L='<div class="lb">'+rows.map(r=>'<div>'+r+'</div>').join('')+'</div>';
+ $('#bb').innerHTML=L+v.cells.map(c=>{const m=c.ab===c.bb,x=m&&c.a!==c.r;
+  return '<div class="col"><div class="c">'+c.a+'</div><div class="c">'+(c.ab?'×':'+')+'</div><div class="c '+(eve&&c.e?'e':'')+'">'+(eve?(c.e?'◆':'·'):'')+'</div><div class="c">'+(c.bb?'×':'+')+'</div><div class="c '+(x?'x':'')+'">'+c.r+'</div><div class="c '+(m?(x?'x':'m'):'')+'">'+(m?(x?'✗':'✓'):'–')+'</div></div>'}).join('');
+ const cols=[...document.querySelectorAll('#bb .col')];
+ for(const c of cols){c.classList.add('on');await w(110)}
+ await w(300);gauge(v.qber);met(5,pct(v.qber));await w(900);return v}
+function reset(){run++;for(let i=1;i<6;i++)met(i,'–');P=[];S.st={A:'ok',B:'ok',C:'ok'};S.ln={A:'secure',B:'secure',C:'secure'};S.eve=0;S.att=0;S.shield=0;S.flash=0;status('ALL SYSTEMS NOMINAL','ok');$('#bb').innerHTML='';$('#bh').textContent='BB84 QUANTUM KEY EXCHANGE · waiting';gauge(0);$('#gv').textContent='QBER · threshold marker at 11%';$('#gv').className='info'}
+async function go(fn){reset();const r=run;try{await fn()}catch(e){if(e!=='stop')throw e}}
+const WHY={bad_signature:'signature does not match',replay_detected:'nonce already used',stale_command:'timestamp too old',action_not_allowed:'action not on the allowlist'};
+async function reject(name,res,from){const r=res[1];fire(from||'X','B','#ff4d5e',6,900);await w(1000);S.shield=1;S.flash=.6;log(name+' → <span class="bad">REJECTED</span> · '+r+' ('+(WHY[r]||r)+')','ok');await w(1200)}
+async function ddos(){
+ status('UNDER ATTACK','bad');S.att=1;S.st.B='attack';log('Traffic spike on node B ('+D.meta.node+')','bad');await w(2200);
+ log('STAGE 1 · DDoS flagged, confidence 94% <b>(stand-in for the AI model)</b>','warn');S.flash=1;await w(1300);
+ status('SECURING CHANNEL','warn');S.ln.B='build';log('STAGE 2 · QRNG seed ready (32 bytes) seeds the ML-KEM and ML-DSA key generators','info');await w(900);
+ log('BB84 · sending '+D.clean.bb84.n+' qubits on a clean line','info');const v=await bb(D.clean.bb84,0,'clean channel');
+ log('BB84 · QBER '+pct(v.qber)+' is below '+pct(D.meta.threshold)+': key accepted','ok');await w(700);
+ const s=D.clean.s2;log('ML-KEM-768 · ciphertext '+s.sizes_bytes.kem_ciphertext+' B, 32 B shared secret','info');await w(700);
+ log('Hybrid key (BB84 + ML-KEM) → AES-256-GCM ready · key '+s.key_id,'ok');met(1,s.key_id);met(2,s.sizes_bytes.kem_ciphertext+' B');met(4,s.key_gen_time_ms+' ms');S.ln.B='secure';await w(900);
+ const c=D.cmd.isolate;log('ML-DSA · command ISOLATE signed ('+c.sig_bytes+' B) in '+c.sign_ms+' ms','info');met(3,c.sig_bytes+' B');fire('K','B','#35f2a0',8,900);await w(1100);
+ S.shield=1;log('Node B verifies the signature: <span class="ok">'+c.verify[1]+'</span> ('+c.verify_ms+' ms)','ok');await w(700);
+ S.st.B='isolated';S.ln.B='none';S.att=0;P=[];status('NODE B ISOLATED','warn');log('NODE B ISOLATED · attack traffic blocked','ok');await w(2200);
+ log('Node B looks clean again (simulated). Healing starts','info');S.st.B='healing';status('HEALING','warn');S.ln.B='build';await w(1200);
+ log('Re-keying: new BB84 + ML-KEM exchange','info');await bb(D.heal.bb84,0,'re-keying after recovery');
+ const h=D.heal.s2;log('New key '+h.key_id+' (old key '+s.key_id+'): old key is never reused','ok');met(1,h.key_id);met(4,h.key_gen_time_ms+' ms');
+ log('Signed RECONNECT verified: <span class="ok">'+D.cmd.reconnect[1]+'</span>','ok');fire('K','B','#35f2a0',8,900);await w(1000);
+ S.st.B='ok';S.ln.B='secure';S.shield=1;status('HEALED · ALL SYSTEMS NOMINAL','ok');log('NODE B RESTORED with fresh keys','ok');await w(1500)}
+async function eve(){
+ status('SECURING CHANNEL','warn');S.ln.B='build';log('Node B requests a secure channel','info');await w(1000);
+ S.eve=1;log('EVE taps the quantum link (intercept and resend)','bad');await w(1100);
+ const v=await bb(D.eve.bb84,1,'EAVESDROPPER ON THE LINE');
+ S.flash=1;S.ln.B='broken';status('EAVESDROPPER DETECTED','bad');log('BB84 · QBER '+pct(v.qber)+' is above '+pct(D.meta.threshold)+': <span class="bad">EAVESDROPPER DETECTED</span>','bad');await w(1000);
+ log('Stage 2 result: <span class="ok">'+D.eve.s2.status+'</span> · key discarded, no command issued','ok');await w(1600);
+ S.eve=0;S.ln.B='secure';status('LINE CLEAR · RETRYING','warn');log('Retry on a clean line → '+D.clean.s2.status,'ok');await w(1200);status('ALL SYSTEMS NOMINAL','ok')}
+async function forged(){
+ S.st.B='isolated';S.ln.B='none';status('NODE B ISOLATED','warn');log('Attacker sends a FORGED command: RECONNECT node B','bad');S.att=1;await w(1200);
+ await reject('Forged RECONNECT',D.cmd.forged);S.att=0;
+ log('Command signed with the attacker’s own key','bad');S.att=1;await w(1000);await reject('Attacker-signed command',D.cmd.attacker);S.att=0;
+ status('FORGERY BLOCKED','ok');log('Node B stays isolated. Forgery is impossible without the controller’s ML-DSA key','ok');await w(1500)}
+async function replay(){
+ S.st.B='isolated';S.ln.B='none';status('NODE B ISOLATED','warn');S.att=1;
+ log('Attacker re-sends a genuine ISOLATE command (nonce '+D.cmd.isolate.nonce+'…)','bad');await w(1200);await reject('Replayed command',D.cmd.replay);
+ log('Attacker holds an old command back and sends it much later','bad');await w(900);await reject('Stale command',D.cmd.stale);
+ log('Attacker signs a command with an unknown action','bad');await w(900);await reject('Forbidden action',D.cmd.bad_action);
+ S.att=0;status('ALL ATTACKS BLOCKED','ok');await w(1500)}
+async function tamper(){
+ status('SECURING CHANNEL','warn');log('Attacker flips one bit inside encrypted traffic','bad');S.eve=1;await w(1300);
+ S.flash=.7;S.shield=1;log('AES-256-GCM tag check → <span class="ok">'+D.traffic.aes_tamper+'</span> · data rejected','ok');await w(1500);
+ log('Attacker flips one bit in the ML-KEM ciphertext','bad');await w(1300);
+ log('ML-KEM implicit rejection → different secret: <span class="ok">'+(D.traffic.kem_tamper_differs?'attack fails':'BUG')+'</span>','ok');S.eve=0;status('TAMPERING BLOCKED','ok');await w(1500)}
+async function all(){for(const f of [ddos,eve,forged,replay,tamper]){await go(f);await w(1500)}status('ALL SCENARIOS COMPLETE','ok')}
+const BT={b0:all,b1:ddos,b2:eve,b3:forged,b4:replay,b5:tamper};
+for(const k in BT)$('#'+k).onclick=()=>go(BT[k]);
+$('#b6').onclick=()=>{reset();log('Reset','info')};
+$('#sp').onchange=e=>speed=+e.target.value;
+function draw(t){
+ cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);const p=pos();
+ cx.fillStyle='#16385a';for(let x=14;x<W;x+=28)for(let y=14;y<H;y+=28)cx.fillRect(x,y,1.5,1.5);
+ cx.lineWidth=1;for(let i=0;i<3;i++){cx.strokeStyle='rgba(62,230,255,'+(.35-i*.09)+')';cx.setLineDash([6+i*4,10]);cx.lineDashOffset=-t/(30+i*20)*(i%2?-1:1);cx.beginPath();cx.arc(p.K.x,p.K.y,34+i*14,0,7);cx.stroke()}
+ cx.setLineDash([]);
+ for(const k of ['A','B','C']){const l=S.ln[k],a=p.K,b=p[k];cx.lineWidth=2;
+  if(l==='secure'){cx.strokeStyle='rgba(62,230,255,.75)';cx.setLineDash([8,8]);cx.lineDashOffset=-t/25}
+  else if(l==='build'){cx.strokeStyle='#ffc857';cx.setLineDash([3,6]);cx.lineDashOffset=-t/15}
+  else if(l==='none'){cx.strokeStyle='rgba(123,138,160,.35)';cx.setLineDash([2,8])}
+  else{cx.strokeStyle='#ff4d5e';cx.setLineDash([]);cx.beginPath();cx.moveTo(a.x,a.y);for(let i=1;i<9;i++){cx.lineTo(a.x+(b.x-a.x)*i/9+(Math.random()-.5)*12,a.y+(b.y-a.y)*i/9+(Math.random()-.5)*12)}cx.lineTo(b.x,b.y);cx.stroke();continue}
+  cx.beginPath();cx.moveTo(a.x,a.y);cx.lineTo(b.x,b.y);cx.stroke()}
+ cx.setLineDash([]);
+ if(S.eve){const m={x:(p.K.x+p.B.x)/2,y:(p.K.y+p.B.y)/2};cx.fillStyle='#ff4d5e';cx.shadowColor='#ff4d5e';cx.shadowBlur=14;cx.beginPath();cx.moveTo(m.x,m.y-13);cx.lineTo(m.x+11,m.y);cx.lineTo(m.x,m.y+13);cx.lineTo(m.x-11,m.y);cx.fill();cx.shadowBlur=0;cx.font='11px monospace';cx.textAlign='center';cx.fillText('EVE',m.x,m.y-20)}
+ if(S.att){cx.strokeStyle='#ff4d5e';cx.fillStyle='rgba(255,77,94,.2)';cx.lineWidth=2;hex(p.X.x,p.X.y,16);cx.fill();cx.stroke();cx.fillStyle='#ff4d5e';cx.font='11px monospace';cx.textAlign='center';cx.fillText('ATTACKER',p.X.x,p.X.y-22);if(t-lastSp>110){lastSp=t;if(S.st.B==='attack')fire('X','B','#ff4d5e',1,700)}}
+ const now=performance.now();P=P.filter(q=>now-q.t<q.d);for(const q of P){const u=(now-q.t)/q.d;if(u<0)continue;const x=q.a.x+(q.b.x-q.a.x)*u,y=q.a.y+(q.b.y-q.a.y)*u;cx.fillStyle=q.c;cx.shadowColor=q.c;cx.shadowBlur=8;cx.beginPath();cx.arc(x,y,3,0,7);cx.fill();cx.shadowBlur=0}
+ cx.textAlign='center';cx.strokeStyle='#3ee6ff';cx.fillStyle='rgba(62,230,255,.15)';cx.lineWidth=2;cx.shadowColor='#3ee6ff';cx.shadowBlur=18;hex(p.K.x,p.K.y,26);cx.fill();cx.stroke();cx.shadowBlur=0;
+ cx.fillStyle='#cfefff';cx.font='bold 11px monospace';cx.fillText('SYSTEM 1',p.K.x,p.K.y-3);cx.fillText('CONTROLLER',p.K.x,p.K.y+11);
+ for(const k of ['A','B','C']){const s=S.st[k],c=COL[s],q=p[k],pulse=s==='attack'?3+Math.sin(t/90)*3:0;cx.strokeStyle=c;cx.fillStyle=c+'33';cx.lineWidth=2;cx.shadowColor=c;cx.shadowBlur=14+pulse*2;
+  if(s==='isolated')cx.setLineDash([5,5]);hex(q.x,q.y,22+pulse);cx.fill();cx.stroke();cx.setLineDash([]);cx.shadowBlur=0;
+  if(s==='healing'){cx.beginPath();cx.arc(q.x,q.y,32,t/200,t/200+2.2);cx.stroke()}
+  if(s==='isolated'){cx.beginPath();cx.moveTo(q.x-9,q.y-9);cx.lineTo(q.x+9,q.y+9);cx.moveTo(q.x+9,q.y-9);cx.lineTo(q.x-9,q.y+9);cx.stroke()}
+  cx.fillStyle='#cfefff';cx.font='bold 11px monospace';cx.fillText(NM[k][0],q.x,q.y+40);cx.fillStyle=c;cx.font='11px monospace';cx.fillText(NM[k][1]+' · '+({ok:'ONLINE',attack:'UNDER ATTACK',isolated:'ISOLATED',healing:'HEALING'})[s],q.x,q.y+54)}
+ if(S.shield>0){cx.strokeStyle='rgba(53,242,160,'+S.shield+')';cx.lineWidth=3;cx.beginPath();cx.arc(p.K.x,p.K.y,40+(1-S.shield)*150,0,7);cx.stroke();S.shield-=.02}
+ if(S.flash>0){cx.fillStyle='rgba(255,77,94,'+S.flash*.22+')';cx.fillRect(0,0,W,H);S.flash-=.03}
+ requestAnimationFrame(draw)}
+function hex(x,y,r){cx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i+Math.PI/6;cx[i?'lineTo':'moveTo'](x+r*Math.cos(a),y+r*Math.sin(a))}cx.closePath()}
+size();
+if(D){$('#ft').textContent='Stage 2 numbers come from real runs of this code ('+D.meta.machine+', '+D.meta.generated+'). QRNG and BB84 are simulated in Qiskit. The Stage 1 detection step is a stand-in until the AI models exist.';log('Ready. Press “Run everything” or pick a scenario.','info')}else $('#ft').textContent='No data: build this page with python -m visualization.build_jarvis';
+requestAnimationFrame(draw);
+</script></body></html>

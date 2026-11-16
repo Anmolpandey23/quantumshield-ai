@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
+.venv/
+*.egg-info/
+# Secrets and keys: NEVER commit
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+# Big files: datasets and models are shared outside Git
+data/
+**/data/raw/
+**/data/processed/
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.npy
+*.npz
+*.pkl
+*.parquet
+*.zip
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Trained models and local databases (share via Drive, never Git)
+**/artifacts/
+backend_dashboard/data/
+*.db
+
+# Frontend (Node)
+frontend/node_modules/
+frontend/dist/
+frontend/.output/
+# ...but these two are source files that the rules above would otherwise hide:
+!frontend/src/data/
+!.env.example

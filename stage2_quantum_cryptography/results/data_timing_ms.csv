@@ -1,0 +1,12 @@
+operation,mean_ms,std_ms,implementation
+ML-KEM keygen,2.626,0.063,pure Python (educational)
+ML-KEM encaps,3.769,0.491,pure Python (educational)
+ML-KEM decaps,4.974,0.452,pure Python (educational)
+ML-DSA keygen,7.519,0.27,pure Python (educational)
+ML-DSA sign,38.952,16.809,pure Python (educational)
+ML-DSA verify,8.3,0.627,pure Python (educational)
+X25519 keygen,0.036,0.015,OpenSSL via cryptography (C)
+X25519 exchange,0.037,0.012,OpenSSL via cryptography (C)
+Ed25519 sign,0.036,0.006,OpenSSL via cryptography (C)
+Ed25519 verify,0.102,0.007,OpenSSL via cryptography (C)
+RSA-2048 keygen,32.163,8.926,OpenSSL via cryptography (C)

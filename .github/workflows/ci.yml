@@ -1,0 +1,45 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read          # least privilege: CI can read the repo, nothing more
+jobs:
+  stage1:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: stage1_ai_threat_prediction}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip, cache-dependency-path: stage1_ai_threat_prediction/requirements.txt}
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+  stage2:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: stage2_quantum_cryptography}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip, cache-dependency-path: stage2_quantum_cryptography/requirements.txt}
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+  stage3_backend_integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12", cache: pip, cache-dependency-path: requirements-integration.txt}
+      - run: pip install -r requirements-integration.txt
+      - run: python -m pytest -q
+      - run: cd stage3_self_healing && python -m pytest -q
+      - run: cd backend_dashboard && python -m pytest -q
+  frontend:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: frontend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run build

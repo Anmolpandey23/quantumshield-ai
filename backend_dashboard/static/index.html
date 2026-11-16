@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QuantumShield AI — Control Room</title>
+<style>
+:root{--bg:#0b1220;--card:#111a2e;--line:#1f2d4a;--txt:#e6edf7;--mut:#8aa0c2;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--acc:#38bdf8}
+@media (prefers-color-scheme: light){:root{--bg:#f3f6fb;--card:#fff;--line:#dbe3ef;--txt:#0f1b33;--mut:#586a8a}}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}
+header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+h1{font-size:18px;margin:0}h2{font-size:13px;margin:0 0 10px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.pill{padding:2px 9px;border-radius:99px;font-size:12px;border:1px solid var(--line);color:var(--mut)}
+.pill.live{color:var(--ok);border-color:var(--ok)}.pill.off{color:var(--bad);border-color:var(--bad)}
+main{padding:16px 20px;display:grid;gap:14px;grid-template-columns:repeat(12,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}
+.kpis{grid-column:span 12;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi b{display:block;font-size:26px}.kpi span{color:var(--mut);font-size:12px}
+.nodes{grid-column:span 5}.feed{grid-column:span 7}.keys{grid-column:span 7}.appr{grid-column:span 5}
+@media(max-width:1000px){.nodes,.feed,.keys,.appr{grid-column:span 12}}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}
+th{color:var(--mut);font-weight:500}.scroll{max-height:340px;overflow:auto}
+.tag{padding:1px 8px;border-radius:6px;font-size:12px;font-weight:600}
+.online{background:#14532d33;color:var(--ok)}.monitored{background:#78350f33;color:var(--warn)}.isolated{background:#7f1d1d44;color:var(--bad)}
+.bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;min-width:60px}.bar i{display:block;height:100%}
+button{background:var(--acc);color:#04202e;border:0;border-radius:8px;padding:7px 12px;font-weight:600;cursor:pointer}
+button.g{background:transparent;color:var(--txt);border:1px solid var(--line)}button.d{background:var(--bad);color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}small{color:var(--mut)}
+input{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 8px}
+</style></head>
+<body>
+<header>
+  <div><h1>🛡️ QuantumShield AI — Control Room</h1><small id="mode"></small></div>
+  <div class="row">
+    <span id="conn" class="pill off">connecting…</span>
+    <button onclick="sim('attack')">Simulate attack</button>
+    <button class="g" onclick="sim('eavesdrop')">Attack + eavesdropper</button>
+    <button class="g" onclick="sim('clean')">Clean traffic</button>
+    <button class="g" id="simbtn" onclick="toggleSim()">Start live simulator</button>
+    <button class="g" onclick="settings()">⚙</button>
+  </div>
+</header>
+<main>
+  <section class="kpis" id="kpis"></section>
+  <section class="card nodes"><h2>Machines</h2><div class="scroll"><table><thead><tr><th>Node</th><th>Status</th><th>Risk</th><th>Threat</th></tr></thead><tbody id="nodes"></tbody></table></div></section>
+  <section class="card feed"><h2>Live threat &amp; response feed</h2><div class="scroll"><table><thead><tr><th>Time</th><th>Node</th><th>Stage 1</th><th>Stage 2 channel</th><th>Stage 3 command</th></tr></thead><tbody id="feed"></tbody></table></div></section>
+  <section class="card keys"><h2>Quantum-safe key exchanges</h2><div class="scroll"><table><thead><tr><th>Time</th><th>Node</th><th>Result</th><th>QBER</th><th>ms</th><th>Key id</th></tr></thead><tbody id="keys"></tbody></table></div></section>
+  <section class="card appr"><h2>Waiting for a human</h2><div id="appr"><small>Nothing waiting.</small></div></section>
+</main>
+<script>
+const qs=new URLSearchParams(location.search);
+let BASE=localStorage.qs_base||(location.protocol==='file:'?'http://localhost:8000':location.origin), KEY=localStorage.qs_key||'';
+const H=()=>KEY?{'X-API-Key':KEY,'Content-Type':'application/json'}:{'Content-Type':'application/json'};
+const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const api=(p,m='GET',b)=>fetch(BASE+p,{method:m,headers:H(),body:b?JSON.stringify(b):undefined}).then(r=>r.json());
+let simOn=false;
+function settings(){const b=prompt('Backend URL',BASE);if(b){BASE=b.replace(/\/$/,'');localStorage.qs_base=BASE}const k=prompt('API key (blank = none)',KEY);if(k!==null){KEY=k;localStorage.qs_key=k}location.reload()}
+async function sim(s){await api('/api/simulate/'+s,'POST');}
+async function toggleSim(){const r=await api(simOn?'/api/simulator/stop':'/api/simulator/start','POST');simOn=r.running;$('simbtn').textContent=simOn?'Stop live simulator':'Start live simulator'}
+const time=t=>t?new Date(t).toLocaleTimeString():'';
+function kpis(s){const k=[['Machines',s.nodes_total],['Threats flagged',s.threats_flagged],['Isolated now',s.nodes_isolated],['Secure key exchanges',s.key_exchanges_ok],['Eavesdroppers caught',s.eavesdrop_aborts],['Avg key time (ms)',s.avg_key_gen_ms],['QBER clean / Eve',s.avg_qber_clean+' / '+s.avg_qber_eve],['Awaiting human',s.pending_approvals]];
+ $('kpis').innerHTML=k.map(([a,b])=>`<div class="card kpi"><b>${esc(b)}</b><span>${a}</span></div>`).join('');
+ $('mode').textContent=`Stage 1: ${s.mode.stage1} · Stage 3: ${s.mode.stage3} · simulator: ${s.simulator.running?'running ('+s.simulator.kind+')':'off'}`;simOn=s.simulator.running;$('simbtn').textContent=simOn?'Stop live simulator':'Start live simulator'}
+function nodes(ns){ns.sort((a,b)=>b.risk_score_node-a.risk_score_node);$('nodes').innerHTML=ns.map(n=>{const c=n.risk_score_node>.7?'var(--bad)':n.risk_score_node>.4?'var(--warn)':'var(--ok)';
+ return `<tr><td>${esc(n.node_id)}${n.critical?' ⭐':''}</td><td><span class="tag ${n.status}">${n.status}</span></td><td><div class="bar"><i style="width:${n.risk_score_node*100}%;background:${c}"></i></div></td><td>${n.threat_label==='BENIGN'?'<small>—</small>':esc(n.threat_label)}</td></tr>`}).join('')}
+function evrow(e){const s1=e.stage1,s2=e.stage2,c=e.stage3_command;
+ const a=s1.threat_label==='BENIGN'?`<small>benign (${Math.round(s1.confidence*100)}%)</small>`:`<b>${esc(s1.threat_label)}</b> ${Math.round(s1.confidence*100)}% · risk ${Math.round(s1.risk_score_node*100)}%<br><small>${esc((s1.explanation||[]).join('; '))}</small>`;
+ const b=!s2?'<small>not needed</small>':s2.status==='secure_channel_established'?`<span style="color:var(--ok)">✔ secure</span> <small>QBER ${(s2.qber*100).toFixed(1)}%</small>`:`<span style="color:var(--bad)">✖ ${esc(s2.status.replace(/_/g,' '))}</span> <small>QBER ${(s2.qber*100).toFixed(1)}%</small>`;
+ const d=e.decision==='pending_human_approval'?`<span style="color:var(--warn)">⏳ needs approval: ${esc(e.pending_approval.action)}</span>`:c?`<b>${esc(c.payload.action)}</b> ${e.command_verified?'<span style="color:var(--ok)">signature ✔</span>':'<span style="color:var(--bad)">rejected</span>'}${e.rekeyed?' <small>new keys</small>':''}`:e.decision==='aborted_no_command'?'<span style="color:var(--bad)">no command sent</span>':'<small>—</small>';
+ return `<tr><td>${time(e.timestamp)}</td><td>${esc(e.node_id)}</td><td>${a}</td><td>${b}</td><td>${d}</td></tr>`}
+let feed=[];function renderFeed(){$('feed').innerHTML=feed.slice(0,60).map(evrow).join('')}
+function keysRow(k){return `<tr><td>${time(k.timestamp)}</td><td>${esc(k.node_id)}</td><td>${k.status==='secure_channel_established'?'<span style="color:var(--ok)">established</span>':'<span style="color:var(--bad)">'+esc(k.status.replace(/_/g,' '))+'</span>'}</td><td>${(k.qber*100).toFixed(1)}%</td><td>${k.key_gen_time_ms}</td><td><small>${esc(k.shared_key_id||'—')}</small></td></tr>`}
+async function loadKeys(){const ks=await api('/api/keys?limit=40');$('keys').innerHTML=ks.map(keysRow).join('')}
+function appr(p){$('appr').innerHTML=p.length?p.map(x=>`<div class="card" style="margin-bottom:8px"><b>${esc(x.action.toUpperCase())}</b> ${esc(x.node_id)}<br><small>${esc(x.reason)}</small><div class="row" style="margin-top:8px"><button onclick="decide('${x.approval_id}','approve')">Approve</button><button class="d" onclick="decide('${x.approval_id}','reject')">Reject</button></div></div>`).join(''):'<small>Nothing waiting.</small>'}
+async function decide(id,w){await api(`/api/approvals/${id}/${w}`,'POST',{approver:'dashboard'})}
+let kt;function applyMsg(m){if(m.stats)kpis(m.stats);if(m.nodes)nodes(m.nodes);if(m.pending)appr(m.pending);
+ if(m.type==='snapshot'){feed=m.events||[];renderFeed();loadKeys()}else if(m.event){feed.unshift(m.event);renderFeed();clearTimeout(kt);kt=setTimeout(loadKeys,300)}}
+function connect(){const u=new URL(BASE);const ws=new WebSocket((u.protocol==='https:'?'wss://':'ws://')+u.host+'/ws'+(KEY?'?api_key='+encodeURIComponent(KEY):''));
+ ws.onopen=()=>{$('conn').textContent='live';$('conn').className='pill live'};ws.onmessage=e=>applyMsg(JSON.parse(e.data));
+ ws.onclose=()=>{$('conn').textContent='disconnected — retrying';$('conn').className='pill off';setTimeout(connect,2000)}}
+connect();
+</script>
+</body></html>

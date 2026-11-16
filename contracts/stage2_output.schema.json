@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage2_output",
+  "title": "Stage 2 output: result of secure_channel()",
+  "type": "object",
+  "required": ["node_id", "status", "qber", "eavesdrop_detected", "key_gen_time_ms"],
+  "properties": {
+    "node_id": {"type": "string"},
+    "status": {"enum": ["secure_channel_established", "aborted_eavesdrop_detected", "aborted_insufficient_key_material", "aborted_key_mismatch", "failed_self_check"]},
+    "qber": {"type": "number", "minimum": 0, "maximum": 1},
+    "eavesdrop_detected": {"type": "boolean"},
+    "key_gen_time_ms": {"type": "number", "minimum": 0},
+    "timings_ms": {"type": "object"}
+  },
+  "if": {"properties": {"status": {"const": "secure_channel_established"}}},
+  "then": {"required": ["shared_key_id", "kem_ciphertext", "signature_public_key", "signature"]}
+}
