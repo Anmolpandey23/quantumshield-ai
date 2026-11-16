@@ -5,4 +5,4 @@ numpy>=1.26
 pandas>=2.1
 scikit-learn>=1.4
 jsonschema==4.26.0
-pytest==9.1.1
+pytest>=8.0

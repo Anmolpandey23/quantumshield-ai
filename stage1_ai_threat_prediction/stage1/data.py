@@ -49,16 +49,52 @@ def load_cicids(data_dir: str, max_rows: int | None = 400_000, max_per_attack: i
     if not files:
         raise DatasetFormatError(f"No .csv files found in '{data_dir}'. See docs/DATASET_AND_TRAINING.md")
     need = set(FEATURES) | set(META_COLS) | {"Label"}
+    feat_set = set(FEATURES)
+    # Cap rows per file so the parts list never exceeds ~2× max_rows total in RAM.
+    # 8 files → each gets at most ⌈max_rows * 2 / 8⌉ rows, minimum 50 000.
+    _cap = max_rows or 400_000
+    per_file_cap = max(50_000, (_cap * 2) // max(len(files), 1))
     parts = []
     for f in files:
         head = pd.read_csv(f, nrows=0, encoding="latin-1")
         cols = [c for c in head.columns if c.strip() in need]
-        part = pd.read_csv(f, usecols=cols, encoding="latin-1", low_memory=False)
-        part.columns = [c.strip() for c in part.columns]
-        part = part.loc[:, ~part.columns.duplicated()]
+        # Read in 100 000-row chunks so the C parser never allocates the whole file at once.
+        chunk_acc: list[pd.DataFrame] = []
+        rows_so_far = 0
+        for chunk in pd.read_csv(
+            f, usecols=cols, encoding="latin-1",
+            low_memory=True, chunksize=100_000
+        ):
+            chunk.columns = [c.strip() for c in chunk.columns]
+            chunk = chunk.loc[:, ~chunk.columns.duplicated()]
+            # Numeric conversion per-chunk (avoids large intermediate copies)
+            for col in (feat_set & set(chunk.columns)):
+                chunk[col] = pd.to_numeric(chunk[col], errors="coerce")
+            chunk_acc.append(chunk)
+            rows_so_far += len(chunk)
+            if rows_so_far >= per_file_cap:
+                break          # enough rows from this file
+        part = pd.concat(chunk_acc, ignore_index=True)
+        del chunk_acc          # free chunk list immediately
+        # Stratified sample per file: keep benign + all attacks up to cap
+        if len(part) > per_file_cap and "Label" in part.columns:
+            rng_local = np.random.default_rng(seed)
+            part["Label"] = part["Label"].map(normalise_label)
+            ben_mask = part["Label"] == BENIGN
+            attacks = part[~ben_mask]
+            benign  = part[ben_mask]
+            n_ben   = max(per_file_cap - len(attacks), 5_000)
+            if len(benign) > n_ben:
+                benign = benign.iloc[
+                    np.sort(rng_local.choice(len(benign), n_ben, replace=False))
+                ]
+            part = pd.concat([benign, attacks], ignore_index=True)
+            del benign, attacks
         parts.append(part)
         print(f"  loaded {os.path.basename(f)}: {len(part):,} rows")
+        del part               # name goes away; DataFrame lives only inside `parts`
     df = pd.concat(parts, ignore_index=True)
+    del parts                  # free all per-file DataFrames immediately
     missing = [c for c in list(FEATURES) + META_COLS + ["Label"] if c not in df.columns]
     if missing:
         raise DatasetFormatError(
@@ -66,7 +102,9 @@ def load_cicids(data_dir: str, max_rows: int | None = 400_000, max_per_attack: i
             "Source IP, Destination IP and Timestamp). The 'MachineLearningCVE' CSVs do not.")
     df["Label"] = df["Label"].map(normalise_label)
     df["Timestamp"] = pd.to_datetime(df["Timestamp"], dayfirst=True, errors="coerce", format="mixed")
-    df[FEATURES] = df[FEATURES].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan)
+    # Replace inf/nan column-by-column (never creates a full-width copy)
+    for col in FEATURES:
+        df[col] = df[col].replace([np.inf, -np.inf], np.nan)
     df = df.dropna(subset=FEATURES + ["Timestamp", "Source IP", "Destination IP"]).drop_duplicates()
     counts = df["Label"].value_counts()
     keep = counts[counts >= MIN_CLASS_ROWS].index
