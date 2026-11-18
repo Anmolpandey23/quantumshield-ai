@@ -35,11 +35,16 @@ class Engine:
         self.last_seen: dict[str, str] = {}
         self.queues: set[asyncio.Queue] = set()
         self.sim_task: asyncio.Task | None = None
+        self.healing_task: asyncio.Task | None = None
         self.sim = None
         self.sim_interval = 3.0
         self._lock = threading.Lock()
         self.started = time.time()
         self.sim_run: dict | None = None            # last dashboard scenario run (see run_scenario)
+        for i in range(14):
+            n = f"10.1.0.{i + 1}"
+            self.orch.status.setdefault(n, "online")
+            self.orch.node_keys.setdefault(n, f"key_{n}_{abs(hash(n)) & 0xffffffff:08x}")
 
     # ------------------------------------------------------------------ processing (blocking: call via a thread pool)
     def _record(self, event: dict) -> dict:
@@ -94,6 +99,8 @@ class Engine:
             node = f"10.1.0.{i + 1}"
             hit = i < attacked
             events.append(self.process_stage1(fake_stage1(node, attack if hit else None, rng), eve if hit else 0.0))
+            if not hit and self.orch.status.get(node) != "isolated" and node not in self.orch.node_keys:
+                self.orch.node_keys[node] = f"key_{node}_{abs(hash(node + str(seed))) & 0xffffffff:08x}"
         self.sim_run = {"config": {"scenario": scenario, "intensity": intensity, "nodes": nodes}, "attack": attack,
                         "attacked": attacked, "events": events}
         return self.sim_run
@@ -174,6 +181,36 @@ class Engine:
             except (asyncio.CancelledError, Exception):
                 pass
         return self.sim_status()
+
+    async def start_healing_watcher(self) -> None:
+        """Background autonomous watcher: detects isolated nodes and feeds clean observation
+        steps so Stage 3 satisfies its cooldown and issues an ML-DSA signed RECONNECT command."""
+        if self.healing_task and not self.healing_task.done():
+            return
+
+        async def loop():
+            while True:
+                await asyncio.sleep(2.0)
+                try:
+                    isolated = [n for n, st in list(self.orch.status.items()) if st == "isolated"]
+                    if not isolated:
+                        continue
+                    for node in isolated:
+                        ev = await asyncio.to_thread(self.scenario, "clean", node)
+                        if ev.get("decision") == "command_issued":
+                            await self.broadcast(ev)
+                except Exception:
+                    pass
+
+        self.healing_task = asyncio.create_task(loop())
+
+    async def stop_healing_watcher(self) -> None:
+        if self.healing_task:
+            self.healing_task.cancel()
+            try:
+                await self.healing_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
     def reset(self) -> None:
         self.store.clear()

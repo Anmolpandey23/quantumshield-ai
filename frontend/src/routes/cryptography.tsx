@@ -12,9 +12,10 @@ import { Meter } from "@/components/hud/Meter";
 import { StatusBadge, type BadgeTone } from "@/components/hud/StatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { Switch } from "@/components/ui/switch";
 import { fmtDateTime, fmtTime } from "@/lib/format";
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
 import { cryptoQuery } from "@/services/queries";
 import type { CryptoSession, PqcAlgorithm } from "@/types/quantumshield";
 
@@ -78,6 +79,7 @@ function DemoKeyGenerator() {
 
 function CryptoPage() {
   const { data } = useSuspenseQuery(cryptoQuery);
+  const { isMock } = useLiveFeed();
   const [hybrid, setHybrid] = useState(true);
   const [autoRotate, setAutoRotate] = useState(true);
 
@@ -92,7 +94,7 @@ function CryptoPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <GlassPanel title="PQC Coverage" icon={<Lock />} actions={<DemoBadge />}>
           <div className="flex flex-col items-center">
-            <HudRing value={data.coverage} label={USE_MOCK_DATA ? "% links quantum-safe" : "% nodes holding a quantum-safe key"} size={200} />
+            <HudRing value={data.coverage} label={isMock ? "% links quantum-safe" : "% nodes holding a quantum-safe key"} size={200} />
             <div className="mt-5 w-full space-y-3">
               <ToggleRow label="Hybrid mode (classical + PQC)" checked={hybrid} onChange={setHybrid} />
               <ToggleRow label="Automatic key rotation" checked={autoRotate} onChange={setAutoRotate} />
@@ -103,46 +105,51 @@ function CryptoPage() {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
           {data.algorithms.map((a, i) => (
-            <motion.div
+            <ShineBorder
               key={a.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              whileHover={{ y: -3 }}
-              className="glass rounded-xl p-5"
+              borderRadius={16}
+              color={a.id === "mlkem" ? ["#14b8a6", "#38bdf8", "#06b6d4"] : ["#a855f7", "#ec4899", "#8b5cf6"]}
+              className="size-full"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{a.role}</p>
-                  <h3 className="mt-1 text-xl font-semibold text-foreground">{a.name}</h3>
-                  <p className="text-xs text-muted-foreground">{a.family} · {a.standard}</p>
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07 }}
+                className="size-full p-5"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{a.role}</p>
+                    <h3 className="mt-1 text-xl font-semibold text-foreground">{a.name}</h3>
+                    <p className="text-xs text-muted-foreground">{a.family} · {a.standard}</p>
+                  </div>
+                  <StatusBadge tone={algoTone[a.status]} pulse={a.status === "active"}>{a.status}</StatusBadge>
                 </div>
-                <StatusBadge tone={algoTone[a.status]} pulse={a.status === "active"}>{a.status}</StatusBadge>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
-                <div className="rounded-md border border-border bg-surface/50 p-2">
-                  <p className="text-muted-foreground">NIST level</p>
-                  <p className="font-mono text-foreground">L{a.securityLevel}</p>
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                  <div className="rounded-md border border-border bg-surface/50 p-2">
+                    <p className="text-muted-foreground">NIST level</p>
+                    <p className="font-mono text-foreground font-bold text-primary">L{a.securityLevel} (Quantum-Safe)</p>
+                  </div>
+                  <div className="rounded-md border border-border bg-surface/50 p-2">
+                    <p className="text-muted-foreground">Public key</p>
+                    <p className="font-mono text-foreground">{a.publicKeyBytes.toLocaleString("en-US")} B</p>
+                  </div>
                 </div>
-                <div className="rounded-md border border-border bg-surface/50 p-2">
-                  <p className="text-muted-foreground">Public key</p>
-                  <p className="font-mono text-foreground">{a.publicKeyBytes.toLocaleString("en-US")} B</p>
+                <div className="mt-4">
+                  <div className="mb-1.5 flex justify-between text-xs">
+                    <span className="text-muted-foreground">{a.usageLabel ?? "Traffic share"}</span>
+                    <span className="font-mono text-primary">{a.usage}%</span>
+                  </div>
+                  <Meter value={a.usage} tone="accent" />
                 </div>
-              </div>
-              <div className="mt-4">
-                <div className="mb-1.5 flex justify-between text-xs">
-                  <span className="text-muted-foreground">{a.usageLabel ?? "Traffic share"}</span>
-                  <span className="font-mono text-primary">{a.usage}%</span>
-                </div>
-                <Meter value={a.usage} tone="accent" />
-              </div>
-            </motion.div>
+              </motion.div>
+            </ShineBorder>
           ))}
         </div>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <GlassPanel title="Operation Latency" subtitle={USE_MOCK_DATA ? "Classical vs post-quantum (ms)" : "Measured Stage 2 step timings, average (ms)"} icon={<Cpu />} actions={<DemoBadge label="Illustrative" />}>
+        <GlassPanel title="Operation Latency" subtitle={isMock ? "Classical vs post-quantum (ms)" : "Measured Stage 2 step timings, average (ms)"} icon={<Cpu />} actions={<DemoBadge label="Illustrative" />}>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.benchmarks} margin={{ left: -16, right: 8, top: 8 }}>
@@ -151,8 +158,8 @@ function CryptoPage() {
                 <YAxis {...axisProps} />
                 <Tooltip content={<HudTooltip />} cursor={{ fill: "var(--color-primary)", fillOpacity: 0.06 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                {USE_MOCK_DATA && <Bar dataKey="classicalMs" name="Classical" fill={chartColors.info} radius={[4, 4, 0, 0]} />}
-                <Bar dataKey="pqcMs" name={USE_MOCK_DATA ? "PQC" : "Measured"} fill={chartColors.primary} radius={[4, 4, 0, 0]} />
+                {isMock && <Bar dataKey="classicalMs" name="Classical" fill={chartColors.info} radius={[4, 4, 0, 0]} />}
+                <Bar dataKey="pqcMs" name={isMock ? "PQC" : "Measured"} fill={chartColors.primary} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

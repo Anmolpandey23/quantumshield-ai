@@ -1,8 +1,10 @@
-# Stage 1: AI threat prediction. Python 3.11 or 3.12.
-# Torch: the default pip wheel works on CPU and GPU. For a smaller CPU-only wheel see docs/DATASET_AND_TRAINING.md
+# Stage 1: AI threat prediction (TabDDPM Anomaly Detection + LightGBM Attack Classification). Python 3.10, 3.11, or 3.12.
 torch>=2.2
 numpy>=1.26
 pandas>=2.1
 scikit-learn>=1.4
+lightgbm>=4.0
+shap>=0.45
+joblib>=1.3
 jsonschema==4.26.0
 pytest>=8.0

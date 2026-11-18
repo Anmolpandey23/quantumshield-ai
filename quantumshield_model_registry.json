@@ -1,0 +1,24 @@
+{
+  "project": "QuantumShield AI",
+  "registry_version": "1.0",
+  "created_utc": "2026-11-17T11:45:05.626747+00:00",
+  "models": {
+    "anomaly_detector": {
+      "manifest": "models/tabddpm/improved/tabddpm_manifest.json",
+      "model_artifact": "models/tabddpm/improved/tabddpm_improved.pt",
+      "purpose": "Detect deviations from learned benign network behaviour"
+    },
+    "attack_classifier": {
+      "manifest": "models/cicids_classifier/lightgbm_manifest.json",
+      "model_artifact": "models/cicids_classifier/lightgbm_multiclass.txt",
+      "purpose": "Classify known CICIDS2017 attack categories"
+    }
+  },
+  "integration_policy": {
+    "anomaly_score_and_class_probability_are_distinct": true,
+    "do_not_interpret_anomaly_score_as_probability": true,
+    "do_not_interpret_classification_confidence_as_operational_risk": true,
+    "feature_schemas_must_be_validated_independently": true,
+    "model_artifacts_are_not_modified_by_registry_export": true
+  }
+}

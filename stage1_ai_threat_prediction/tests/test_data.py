@@ -15,9 +15,9 @@ def test_synthetic_has_real_columns_and_rare_attacks():
 
 def test_label_normalisation_matches_cicids_names():
     assert normalise_label("DoS Hulk") == "DoS" and normalise_label("DoS slowloris") == "DoS"
-    assert normalise_label("FTP-Patator") == "BruteForce" and normalise_label("SSH-Patator") == "BruteForce"
-    assert normalise_label("Web Attack \x96 XSS") == "WebAttack" and normalise_label(" BENIGN ") == BENIGN
-    assert normalise_label("DDoS") == "DDoS" and normalise_label("PortScan") == "PortScan"
+    assert normalise_label("FTP-Patator") == "Brute Force" and normalise_label("SSH-Patator") == "Brute Force"
+    assert normalise_label("Web Attack \x96 XSS") == "Web Attacks" and normalise_label(" BENIGN ") == BENIGN
+    assert normalise_label("DDoS") == "DDoS" and normalise_label("PortScan") == "Port Scanning"
 
 
 def test_preprocessor_roundtrip_and_benign_is_class_zero():

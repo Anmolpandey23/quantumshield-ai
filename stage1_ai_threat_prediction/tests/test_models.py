@@ -1,52 +1,98 @@
+import json
+import pathlib
 import numpy as np
-import torch
+import pytest
+from jsonschema import Draft202012Validator
 
-from stage1.config import FEATURES
-from stage1.cpc import calibrate_cpc, make_sequences, train_cpc
+from stage1.classifier import FlowClassifier, train_lightgbm
+from stage1.config import (
+    CLASS_NAMES,
+    CLASS_TO_ID,
+    LIGHTGBM_FEATURES,
+    TABDDPM_FEATURES,
+    TABDDPM_THRESHOLD,
+)
 from stage1.data import make_synthetic
-from stage1.dygnn import build_host_index, build_snapshots, evaluate_dygnn, train_dygnn
-from stage1.explain import top_reasons
-from stage1.preprocess import Preprocessor
-from stage1.tabddpm import TabDDPM
+from stage1.explain import format_explanation_phrases, top_reasons
+from stage1.tabddpm import TabDDPM, TabDDPMPreprocessor
 
-F = len(FEATURES)
-
-
-def test_tabddpm_trains_and_generates_only_what_is_needed():
-    rng = np.random.default_rng(0)
-    x = rng.normal(size=(600, F)).astype("float32"); y = np.r_[np.zeros(500), np.ones(80), np.full(20, 2)].astype(int)
-    x[y == 1] += 3
-    m = TabDDPM(F, 3, timesteps=20, hidden=64)
-    hist = m.fit(x, y, epochs=3, verbose=False)
-    assert hist[-1] < hist[0]
-    xs, ys = m.balance(x, y, target_per_class=120)
-    assert xs.shape == (len(ys), F) and set(ys) == {1, 2} and (ys == 2).sum() == 100
-    assert np.isfinite(xs).all()
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+INFERENCE_SCHEMA = json.loads((ROOT / "contracts" / "inference_schema.json").read_text())
+STAGE1_SCHEMA = json.loads((ROOT / "contracts" / "stage1_output.schema.json").read_text())
 
 
-def test_cpc_gives_higher_score_to_abnormal_sequences():
-    df = make_synthetic(n_minutes=120, n_episodes=0, seed=5)               # benign only
-    p = Preprocessor().fit(df); x = p.transform(df)
-    seqs, _ = make_sequences(x, df["Source IP"].to_numpy(), 16, 4)
-    model = train_cpc(seqs, epochs=3, verbose=False)
-    calibrate_cpc(model, seqs, seqs)
-    normal, weird = model.score(seqs[:50]), model.score(seqs[:50] + 4.0)
-    assert weird.mean() > normal.mean() + 0.2 and ((0 <= normal) & (normal <= 1)).all()
+def test_tabddpm_trains_and_detects_anomalies():
+    rng = np.random.default_rng(42)
+    n_feats = len(TABDDPM_FEATURES)
+    # Benign distribution centered around 0
+    x_benign = rng.normal(0.0, 0.5, size=(400, n_feats)).astype("float32")
+    m = TabDDPM(n_features=n_feats, timesteps=30, hidden=64, threshold=TABDDPM_THRESHOLD, score_timesteps=6)
+    history = m.fit(x_benign, epochs=3, batch_size=128, verbose=False, seed=42)
+    assert history[-1] < history[0]
+
+    # Score benign vs anomalous (shifted distribution)
+    x_attack = rng.normal(4.0, 1.2, size=(50, n_feats)).astype("float32")
+    scores_benign, is_anom_benign = m.predict_anomaly(x_benign[:50])
+    scores_attack, is_anom_attack = m.predict_anomaly(x_attack)
+
+    assert scores_attack.mean() > scores_benign.mean()
+    assert (scores_attack >= TABDDPM_THRESHOLD).sum() > (scores_benign >= TABDDPM_THRESHOLD).sum()
 
 
-def test_dygnn_snapshots_and_training():
-    df = make_synthetic(n_minutes=40, n_episodes=5, seed=6)
-    x = Preprocessor().fit(df).transform(df)
-    idx = build_host_index(df)
-    snaps = build_snapshots(df, x, idx, 60)
-    assert len(snaps) >= 30 and snaps[0].x.shape[1] == F + 4
-    model = train_dygnn(snaps, len(idx), epochs=2, verbose=False)
-    res = evaluate_dygnn(model, snaps, len(idx))
-    assert res["auroc"] is None or 0.5 <= res["auroc"] <= 1.0
+def test_lightgbm_trains_and_predicts_multiclass(tmp_path):
+    df = make_synthetic(n_hosts=10, n_minutes=30, n_episodes=5, seed=12)
+    labels = df["Label"].to_numpy()
+    y = np.array([CLASS_TO_ID.get(str(l), 0) for l in labels], dtype=np.int64)
+
+    clf = train_lightgbm(
+        x_train=df,
+        y_train=y,
+        best_iteration=30,
+        verbose=False,
+        seed=42,
+    )
+
+    probs = clf.predict_proba(df.tail(20))
+    assert probs.shape == (20, len(CLASS_NAMES))
+    np.testing.assert_allclose(probs.sum(axis=1), np.ones(20), atol=1e-3)
+
+    pred_ids, pred_names = clf.predict(df.tail(20))
+    assert len(pred_ids) == 20
+    assert len(pred_names) == 20
+    assert all(name in CLASS_NAMES for name in pred_names)
+
+    # Save & reload test
+    txt_path = tmp_path / "lightgbm_multiclass.txt"
+    bun_path = tmp_path / "cicids_lightgbm_bundle.joblib"
+    clf.save(txt_path, bun_path)
+    assert txt_path.exists() and bun_path.exists()
+
+    loaded = FlowClassifier.load(txt_path, bun_path)
+    probs_loaded = loaded.predict_proba(df.tail(20))
+    np.testing.assert_allclose(probs, probs_loaded, atol=1e-4)
 
 
-def test_explanations_pick_unusual_features_only():
-    attr = np.zeros(F); attr[9] = 1.0; attr[15] = 0.5; attr[0] = 0.9
-    z = np.zeros(F); z[9] = 4.0; z[15] = 2.0; z[0] = 0.1                    # feature 0 is important but NOT unusual
-    r = top_reasons(attr, z)
-    assert r == ["unusual packet rate", "spike in SYN flag ratio"]
+def test_shap_explainability():
+    df = make_synthetic(n_hosts=10, n_minutes=30, n_episodes=4, seed=7)
+    y = np.array([CLASS_TO_ID.get(str(l), 0) for l in df["Label"]], dtype=np.int64)
+    clf = train_lightgbm(x_train=df, y_train=y, best_iteration=25, verbose=False)
+
+    explanations = clf.explain(df.tail(3), k=3)
+    assert len(explanations) == 3
+    for exp in explanations:
+        assert exp["method"] == "shap.TreeExplainer"
+        assert len(exp["top_contributing_features"]) <= 3
+        reasons = format_explanation_phrases(exp["top_contributing_features"])
+        assert isinstance(reasons, list)
+
+
+def test_explanations_top_reasons_legacy():
+    F = len(LIGHTGBM_FEATURES)
+    attr = np.zeros(F)
+    attr[0] = 0.9  # Destination Port
+    attr[12] = 1.0 # Flow Bytes/s
+    z = np.zeros(F)
+    z[0] = 0.1     # not unusual
+    z[12] = 3.5    # unusual
+    r = top_reasons(attr, z, k=2)
+    assert "unusual byte rate" in r

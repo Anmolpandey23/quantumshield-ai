@@ -1,0 +1,5 @@
+{
+  "method": "shap.TreeExplainer",
+  "model_output": "raw",
+  "sample_size": 700
+}

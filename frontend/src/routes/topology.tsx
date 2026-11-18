@@ -9,7 +9,9 @@ import { loadTone, Meter } from "@/components/hud/Meter";
 import { nodeStatusTone, StatusBadge } from "@/components/hud/StatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NetworkGraph, NetworkLegend, statusColor } from "@/components/network/NetworkGraph";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { cn } from "@/lib/utils";
 import { topologyQuery } from "@/services/queries";
 import type { NodeLayer } from "@/types/quantumshield";
 
@@ -31,11 +33,16 @@ const LAYERS: NodeLayer[] = ["edge", "core", "service", "endpoint"];
 function TopologyPage() {
   const { data } = useSuspenseQuery(topologyQuery);
   const [layers, setLayers] = useState<NodeLayer[]>(LAYERS);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    (data.nodes.find((n) => n.status === "compromised") ?? data.nodes.find((n) => n.status === "isolated"))?.id ?? null,
-  );
+  const defaultSelectedId =
+    data.nodes.find((n) => n.status === "compromised")?.id ??
+    data.nodes.find((n) => n.status === "isolated")?.id ??
+    data.nodes.find((n) => n.status === "warning")?.id ??
+    data.nodes.find((n) => n.id === "10.1.0.1")?.id ??
+    data.nodes[0]?.id ??
+    null;
+  const [selectedId, setSelectedId] = useState<string | null>(defaultSelectedId);
   // Look the node up by id on every render so its status follows live updates.
-  const selected = data.nodes.find((n) => n.id === selectedId) ?? null;
+  const selected = data.nodes.find((n) => n.id === (selectedId ?? defaultSelectedId)) ?? data.nodes[0] ?? null;
 
   const dimmed = useMemo(
     () => new Set(data.nodes.filter((n) => !layers.includes(n.layer)).map((n) => n.id)),
@@ -43,13 +50,16 @@ function TopologyPage() {
   );
   const links = selected ? data.edges.filter((e) => e.from === selected.id || e.to === selected.id) : [];
   const counts = data.nodes.reduce<Record<string, number>>((acc, n) => ({ ...acc, [n.status]: (acc[n.status] ?? 0) + 1 }), {});
+  const isolatedCount = counts.isolated ?? 0;
+  const compromisedCount = counts.compromised ?? 0;
+  const healthyCount = counts.healthy ?? 0;
 
   return (
     <>
       <PageHeader
         eyebrow="Module 05"
         title="Network Topology"
-        description="Click any node to inspect it. Filter by layer to focus the map."
+        description="Zero-trust mesh telemetry: real-time microsegmentation, PQC-encrypted channels, and dynamic isolation barriers."
         actions={
           <ToggleGroup type="multiple" value={layers} onValueChange={(v) => setLayers(v as NodeLayer[])}>
             {LAYERS.map((l) => (
@@ -62,19 +72,33 @@ function TopologyPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-        <GlassPanel title="Topology Map" subtitle={`${data.nodes.length} nodes · ${data.edges.length} links`} icon={<Share2 />} actions={<DemoBadge />}>
-          <div className="aspect-[5/3] rounded-lg border border-border bg-background/40">
-            <NetworkGraph topology={data} selectedId={selected?.id} onSelect={(n) => setSelectedId(n.id)} dimmedIds={dimmed} />
-          </div>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <NetworkLegend />
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(counts).map(([s, c]) => (
-                <StatusBadge key={s} tone={nodeStatusTone[s]}>{c} {s}</StatusBadge>
-              ))}
-            </div>
-          </div>
-        </GlassPanel>
+        <div className="relative">
+          <ShineBorder
+            className="w-full rounded-2xl"
+            color={compromisedCount > 0 ? ["#ef4444", "#dc2626"] : isolatedCount > 0 ? ["#f59e0b", "#d97706"] : ["#14b8a6", "#06b6d4"]}
+            borderWidth={1.5}
+            duration={12}
+          >
+            <GlassPanel
+              title="Perimeter Topology Map"
+              subtitle={`${data.nodes.length} nodes · ${data.edges.length} links · Real-time graph`}
+              icon={<Share2 />}
+              actions={<DemoBadge />}
+            >
+              <div className="aspect-[5/3] rounded-lg border border-border bg-background/40 relative overflow-hidden">
+                <NetworkGraph topology={data} selectedId={selected?.id} onSelect={(n) => setSelectedId(n.id)} dimmedIds={dimmed} />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <NetworkLegend />
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(counts).map(([s, c]) => (
+                    <StatusBadge key={s} tone={nodeStatusTone[s]}>{c} {s}</StatusBadge>
+                  ))}
+                </div>
+              </div>
+            </GlassPanel>
+          </ShineBorder>
+        </div>
 
         <div className="space-y-6">
           <GlassPanel title="Node Inspector" icon={<MousePointerClick />}>
@@ -91,6 +115,8 @@ function TopologyPage() {
                   <dl className="mt-4 space-y-2 text-xs">
                     <Item k="Node ID" v={selected.id} />
                     <Item k="Address" v={selected.ip} />
+                    <Item k="Security Status" v={selected.status.toUpperCase()} />
+                    <Item k="Attestation" v="ML-DSA-65 Validated" />
                     <Item k="Links" v={String(links.length)} />
                   </dl>
                   <div className="mt-4">

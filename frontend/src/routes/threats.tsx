@@ -23,11 +23,12 @@ import { HudRing } from "@/components/hud/HudRing";
 import { Meter } from "@/components/hud/Meter";
 import { severityTone, StatusBadge, type BadgeTone } from "@/components/hud/StatusBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { ShineBorder } from "@/components/ui/shine-border";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { fmtDateTime } from "@/lib/format";
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
 import { threatsQuery } from "@/services/queries";
 import type { Severity, ThreatEvent } from "@/types/quantumshield";
 
@@ -53,6 +54,7 @@ const statusTone: Record<ThreatEvent["status"], BadgeTone> = {
 
 function ThreatsPage() {
   const { data } = useSuspenseQuery(threatsQuery);
+  const { isMock } = useLiveFeed();
   const [threshold, setThreshold] = useState(80);
   const [severities, setSeverities] = useState<Severity[]>(["critical", "high", "medium", "low"]);
   const [query, setQuery] = useState("");
@@ -82,18 +84,29 @@ function ThreatsPage() {
       <PageHeader
         eyebrow="Module 02"
         title="AI Threat Prediction"
-        description={USE_MOCK_DATA ? "Forecasted risk and classified threat events produced by the AI engine. Connect your Python model to replace this sample output." : "Threat events classified by the Stage 1 models, with the risk each node carries right now."}
+        description={isMock ? "Forecasted risk and classified threat events produced by the AI engine. Connect your Python model to replace this sample output." : "Threat events classified by the Stage 1 models, with the risk each node carries right now."}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <GlassPanel title="Current Risk Index" icon={<Gauge />} actions={<DemoBadge />}>
-          <div className="flex flex-col items-center">
-            <HudRing value={data.currentRisk} label="Risk / 100" size={200} sublabel={<StatusBadge tone={data.currentRisk >= 70 ? "danger" : data.currentRisk >= 40 ? "warning" : "success"} pulse>{data.currentRisk >= 70 ? "High" : data.currentRisk >= 40 ? "Elevated" : "Low"}</StatusBadge>} />
-            <p className="mt-3 text-center text-xs text-muted-foreground">{USE_MOCK_DATA ? "Next-hour forecast based on sample trend." : "Highest node risk score reported by Stage 1 right now."}</p>
-          </div>
-        </GlassPanel>
+        <ShineBorder
+          borderRadius={16}
+          color={data.currentRisk >= 70 ? ["#ef4444", "#f97316", "#dc2626"] : ["#14b8a6", "#38bdf8", "#06b6d4"]}
+          className="size-full"
+        >
+          <GlassPanel title="Current Risk Index" icon={<Gauge />} actions={<DemoBadge />} className="border-0 bg-transparent">
+            <div className="flex flex-col items-center">
+              <HudRing value={data.currentRisk} label="Risk / 100" size={200} sublabel={<StatusBadge tone={data.currentRisk >= 70 ? "danger" : data.currentRisk >= 40 ? "warning" : "success"} pulse>{data.currentRisk >= 70 ? "High" : data.currentRisk >= 40 ? "Elevated" : "Low"}</StatusBadge>} />
+              <p className="mt-3 text-center text-xs text-muted-foreground">{isMock ? "Next-hour forecast based on sample trend." : "Highest node risk score reported by Stage 1 right now."}</p>
+            </div>
+          </GlassPanel>
+        </ShineBorder>
 
-        <GlassPanel title="Model" subtitle={m.architecture} icon={<BrainCircuit />} className="lg:col-span-2">
+        <ShineBorder
+          borderRadius={16}
+          color={["#14b8a6", "#a855f7", "#38bdf8"]}
+          className="lg:col-span-2 size-full"
+        >
+          <GlassPanel title="Model" subtitle={m.architecture} icon={<BrainCircuit />} className="border-0 bg-transparent">
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-3">
               <Row label="Name" value={m.name} />
@@ -110,14 +123,15 @@ function ThreatsPage() {
                   <Meter value={(v ?? 0) * 100} tone={tone} />
                 </div>
               ))}
-              <p className="text-[11px] text-muted-foreground">{USE_MOCK_DATA ? "Metrics are placeholders until your model reports them." : "n/a = the backend has no measurement. Nothing is estimated."}</p>
+              <p className="text-[11px] text-muted-foreground">{isMock ? "Metrics are placeholders until your model reports them." : "n/a = the backend has no measurement. Nothing is estimated."}</p>
             </div>
           </div>
         </GlassPanel>
+        </ShineBorder>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-5">
-        <GlassPanel className="xl:col-span-3" title="Predicted vs Observed Risk" subtitle={USE_MOCK_DATA ? "Hourly, last 24h" : "Per minute, from live pipeline events"} icon={<Crosshair />} actions={<DemoBadge />}>
+        <GlassPanel className="xl:col-span-3" title="Predicted vs Observed Risk" subtitle={isMock ? "Hourly, last 24h" : "Per minute, from live pipeline events"} icon={<Crosshair />} actions={<DemoBadge />}>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data.riskTrend} margin={{ left: -16, right: 8, top: 8 }}>
@@ -126,8 +140,8 @@ function ThreatsPage() {
                 <YAxis {...axisProps} domain={[0, 100]} />
                 <Tooltip content={<HudTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11, color: chartColors.axis }} />
-                <Line type="monotone" dataKey="predicted" name={USE_MOCK_DATA ? "Predicted" : "Predicted risk"} stroke={chartColors.primary} strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="observed" name={USE_MOCK_DATA ? "Observed" : "Anomaly score"} stroke={chartColors.warning} strokeWidth={2} dot={false} connectNulls={false} />
+                <Line type="monotone" dataKey="predicted" name={isMock ? "Predicted" : "Predicted risk"} stroke={chartColors.primary} strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="observed" name={isMock ? "Observed" : "Anomaly score"} stroke={chartColors.warning} strokeWidth={2} dot={false} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

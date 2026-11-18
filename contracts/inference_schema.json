@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "description": "Common response contract for TabDDPM and LightGBM inference",
+  "fields": {
+    "event_id": "string",
+    "timestamp_utc": "ISO-8601 string",
+    "tabddpm": {
+      "anomaly_score": "number",
+      "threshold": "number",
+      "is_anomaly": "boolean"
+    },
+    "lightgbm": {
+      "predicted_class": "string",
+      "predicted_class_id": "integer",
+      "class_probabilities": "object mapping class name to probability"
+    },
+    "explainability": {
+      "method": "string",
+      "top_contributing_features": "array; populate when explanation is generated",
+      "explanation_reference": "optional string"
+    },
+    "risk_assessment": {
+      "risk_level": "optional; requires a separately validated risk policy",
+      "policy_version": "optional string"
+    },
+    "response": {
+      "recommended_action": "optional string",
+      "execution_status": "pending_approval | simulated | executed"
+    }
+  },
+  "important": [
+    "TabDDPM anomaly score is not a probability.",
+    "LightGBM class probability is not an operational risk score.",
+    "SHAP values explain model output and are not causal effects.",
+    "Risk and response fields must not be populated using unvalidated assumptions."
+  ]
+}

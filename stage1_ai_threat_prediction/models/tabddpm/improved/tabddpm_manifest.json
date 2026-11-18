@@ -1,0 +1,90 @@
+{
+  "model_name": "QuantumShield TabDDPM",
+  "model_type": "Denoising Diffusion Probabilistic Model",
+  "task": "Benign-distribution anomaly detection",
+  "version": "improved",
+  "framework": "PyTorch",
+  "artifacts": {
+    "checkpoint": "models/tabddpm/improved/tabddpm_improved.pt",
+    "preprocessing": "models/tabddpm/improved/preprocessing_improved.joblib",
+    "checkpoint_sha256": "4cabaa8bae254ff4d3e4ddb957f1a7fb844a0a8c0a93f8e71385b223401180f4",
+    "preprocessing_sha256": "0eedcb48ff7844076eb3e93a08a639f9f6d7b38d4e6e60789e1b82e4506bbdf6"
+  },
+  "input": {
+    "feature_count": 11,
+    "feature_columns": [
+      "e2c_total_bytes",
+      "e4_entropy_h",
+      "e5_entropy_c",
+      "e6_time_char",
+      "e6b_flow_duration_ms",
+      "e2_client_size",
+      "e2_client_record_len",
+      "e2_server_record_len",
+      "e1_alg_suite_mlkem1024",
+      "e1_alg_suite_mlkem768",
+      "e1_alg_suite_x25519"
+    ]
+  },
+  "preprocessing": {
+    "imputer": "Stored in preprocessing_improved.joblib",
+    "scaler": "Stored in preprocessing_improved.joblib",
+    "missing_indicators": true,
+    "dropped_constant_features": [
+      "e1_alg_suite_Unknown(0x11eb)",
+      "e1_alg_suite_Unknown(0x11ec)",
+      "e1_alg_suite_nan",
+      "e1b_ciphersuite_2",
+      "e1b_ciphersuite_54",
+      "e1b_ciphersuite_60",
+      "e1b_tls_version_SSL3.0",
+      "e1b_tls_version_TLS1.0",
+      "e2b_ciphersuite_2",
+      "e2b_ciphersuite_54",
+      "e2b_ciphersuite_60",
+      "e2b_tls_version_SSL3.0",
+      "e2b_tls_version_TLS1.0",
+      "e3_cert_parsed",
+      "e3_sig_alg_Unknown(0x0028)",
+      "e3_sig_alg_nan",
+      "e8_proto_context_TLSv1.2_or_older",
+      "e8_proto_context_TLSv1.3",
+      "e9_conn_outcome_Failure",
+      "e9_conn_outcome_Incomplete",
+      "e9_conn_outcome_Success"
+    ],
+    "training_partition": "Original train split, benign rows only",
+    "excluded_post_event_features": [
+      "e9_conn_outcome_failure",
+      "e9_conn_outcome_incomplete",
+      "e9_conn_outcome_success"
+    ]
+  },
+  "architecture": {
+    "steps": 100,
+    "hidden": 128,
+    "n_features": 11,
+    "score_timesteps": 8
+  },
+  "training": {
+    "best_epoch": 10,
+    "seed": 42,
+    "score_seed": 142,
+    "max_validation_fpr": 0.005
+  },
+  "decision_threshold": {
+    "value": 0.56279456615448,
+    "selection_partition": "validation",
+    "validation_recall": 0.810379241516966,
+    "validation_precision": 0.9678188319427891,
+    "validation_fpr": 0.003857142857142857,
+    "max_validation_fp_allowed": 35,
+    "interpretation": "Anomaly-score threshold; not a probability threshold"
+  },
+  "evaluation_metrics_file": "results/tabddpm/improved/evaluation_metrics.json",
+  "evaluation_metrics_sha256": "bb716a0a54753366ac8c24e4862e48f06d3bdd8ea6de8e575ff315034a6be521",
+  "output": {
+    "anomaly_score": "numeric",
+    "is_anomaly": "boolean, based on the selected threshold"
+  }
+}

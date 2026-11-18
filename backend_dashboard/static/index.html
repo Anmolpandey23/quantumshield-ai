@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>QuantumShield AI — Control Room</title>
+<link rel="icon" href="/static/favicon.ico">
 <style>
 :root{--bg:#0b1220;--card:#111a2e;--line:#1f2d4a;--txt:#e6edf7;--mut:#8aa0c2;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444;--acc:#38bdf8}
 @media (prefers-color-scheme: light){:root{--bg:#f3f6fb;--card:#fff;--line:#dbe3ef;--txt:#0f1b33;--mut:#586a8a}}
@@ -29,7 +30,13 @@ input{background:transparent;border:1px solid var(--line);color:var(--txt);borde
 </style></head>
 <body>
 <header>
-  <div><h1>🛡️ QuantumShield AI — Control Room</h1><small id="mode"></small></div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <img src="/static/logo.png" alt="QuantumShield AI" style="height:36px;width:auto;object-fit:contain" />
+    <div>
+      <h1 style="font-size:14px;letter-spacing:0.05em;margin:0;color:var(--acc)">Control Room</h1>
+      <small id="mode"></small>
+    </div>
+  </div>
   <div class="row">
     <span id="conn" class="pill off">connecting…</span>
     <button onclick="sim('attack')">Simulate attack</button>

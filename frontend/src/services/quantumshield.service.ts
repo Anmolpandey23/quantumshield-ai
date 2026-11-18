@@ -26,13 +26,13 @@ import type {
   Topology,
 } from "@/types/quantumshield";
 import { apiClient } from "./api/client";
-import { USE_MOCK_DATA } from "./api/config";
+import { isLiveFeedActive } from "./api/config";
 import { ENDPOINTS } from "./api/endpoints";
 
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function source<T>(mock: T, path: string): () => Promise<T> {
-  return async () => (USE_MOCK_DATA ? mock : apiClient.get<T>(path));
+  return async () => (isLiveFeedActive() ? apiClient.get<T>(path) : mock);
 }
 
 export const quantumShieldService = {
@@ -49,10 +49,21 @@ export const quantumShieldService = {
     stage: SimulationStageId,
     config: SimulationConfig,
   ): Promise<SimulationStageResult> {
-    if (USE_MOCK_DATA) {
+    if (!isLiveFeedActive()) {
       await wait(stage === "final" ? 900 : 1600);
       return mockStageResult(stage, config);
     }
     return apiClient.post<SimulationStageResult>(ENDPOINTS.simulationStage(stage), config);
+  },
+
+  /** Restores and reconnects isolated nodes via the live PQC re-keying verification cycle. */
+  async restoreIsolated(nodeId?: string): Promise<{ reconnected: string[]; remaining_isolated: number }> {
+    if (!isLiveFeedActive()) {
+      return { reconnected: [], remaining_isolated: 0 };
+    }
+    return apiClient.post<{ reconnected: string[]; remaining_isolated: number }>(
+      "/api/healing/restore" + (nodeId ? `?node_id=${encodeURIComponent(nodeId)}` : ""),
+      {},
+    );
   },
 };

@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { HeartPulse, ListChecks, Network, Timer, Wrench, Zap } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { axisProps, chartColors, HudTooltip } from "@/components/charts/chart-theme";
 import { DemoBadge } from "@/components/hud/DemoBadge";
@@ -13,8 +14,9 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { NetworkGraph, NetworkLegend } from "@/components/network/NetworkGraph";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { fmtTime } from "@/lib/format";
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { fmtTime, formatDuration } from "@/lib/format";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
+import { quantumShieldService } from "@/services/quantumshield.service";
 import { healingQuery, topologyQuery } from "@/services/queries";
 import type { HealingIncident, NetworkEdge, NodeStatus, Topology } from "@/types/quantumshield";
 
@@ -54,19 +56,43 @@ const FAULT_NODE = "sw-a";
 function HealingPage() {
   const { data } = useSuspenseQuery(healingQuery);
   const { data: baseTopology } = useSuspenseQuery(topologyQuery);
+  const { isMock } = useLiveFeed();
   const [policies, setPolicies] = useState(data.policies);
   const [phase, setPhase] = useState<Phase>("idle");
   const [incidents, setIncidents] = useState(data.incidents);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const queryClient = useQueryClient();
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const restoreNodes = async () => {
+    setIsRestoring(true);
+    try {
+      const res = await quantumShieldService.restoreIsolated();
+      if (res.reconnected.length > 0) {
+        toast.success(`Restored & reconnected: ${res.reconnected.join(", ")}`, {
+          description: "Quarantine verification satisfied. Nodes rekeyed with ML-KEM-768 and re-admitted.",
+        });
+      } else {
+        toast.info("All nodes are already healthy and online.");
+      }
+      queryClient.invalidateQueries({ queryKey: ["healing"] });
+      queryClient.invalidateQueries({ queryKey: ["topology"] });
+      queryClient.invalidateQueries({ queryKey: ["overview"] });
+    } catch {
+      toast.error("Failed to restore nodes");
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   // Live mode: follow the backend whenever it sends new data (the demo fault injector below only runs on demo data).
   useEffect(() => {
-    if (USE_MOCK_DATA) return;
+    if (isMock) return;
     setPolicies(data.policies);
     setIncidents(data.incidents);
-  }, [data.policies, data.incidents]);
+  }, [data.policies, data.incidents, isMock]);
 
   const topology: Topology = useMemo(() => {
     const statusFor: Partial<Record<Phase, NodeStatus>> = {
@@ -121,20 +147,24 @@ function HealingPage() {
       <PageHeader
         eyebrow="Module 04"
         title="Self-Healing Network"
-        description={USE_MOCK_DATA ? "Autonomous detection, isolation and recovery. The fault-injection demo below runs entirely in the browser." : "Autonomous isolation and recovery decided by Stage 3, with every command ML-DSA signed and verified."}
+        description={isMock ? "Autonomous detection, isolation and recovery. The fault-injection demo below runs entirely in the browser." : "Autonomous isolation and recovery decided by Stage 3, with every command ML-DSA signed and verified."}
         actions={
-          USE_MOCK_DATA ? (
+          isMock ? (
             <Button variant="danger" onClick={injectFault} disabled={busy}>
               <Zap /> Inject demo fault
             </Button>
-          ) : null
+          ) : (
+            <Button variant="hud" onClick={restoreNodes} disabled={isRestoring}>
+              <Wrench className="text-primary" /> {isRestoring ? "Verifying & Rekeying..." : "Heal & Reconnect Nodes"}
+            </Button>
+          )
         }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard index={0} label="Mean time to heal" value={data.mttrSeconds > 0 || USE_MOCK_DATA ? `${data.mttrSeconds}s` : "—"} {...(USE_MOCK_DATA ? { delta: "-29s / wk", trend: "down" as const } : {})} tone="primary" icon={<Timer />} />
-        <StatCard index={1} label="Auto-remediation" value={`${data.autoRemediationRate}%`} {...(USE_MOCK_DATA ? { delta: "+4%", trend: "up" as const } : {})} tone="success" icon={<Wrench />} />
-        <StatCard index={2} label={USE_MOCK_DATA ? "Incidents (7d)" : "Incidents logged"} value={USE_MOCK_DATA ? "66" : String(data.incidents.length)} {...(USE_MOCK_DATA ? { delta: "-12%", trend: "down" as const } : {})} tone="warning" icon={<HeartPulse />} />
+        <StatCard index={0} label="Mean time to heal" value={data.mttrSeconds > 0 || isMock ? formatDuration(data.mttrSeconds) : "—"} {...(isMock ? { delta: "-29s / wk", trend: "down" as const } : {})} tone="primary" icon={<Timer />} />
+        <StatCard index={1} label="Auto-remediation" value={`${data.autoRemediationRate}%`} {...(isMock ? { delta: "+4%", trend: "up" as const } : {})} tone="success" icon={<Wrench />} />
+        <StatCard index={2} label={isMock ? "Incidents (7d)" : "Incidents logged"} value={isMock ? "66" : String(data.incidents.length)} {...(isMock ? { delta: "-12%", trend: "down" as const } : {})} tone="warning" icon={<HeartPulse />} />
         <StatCard index={3} label="Active policies" value={`${policies.filter((p) => p.enabled).length}/${policies.length}`} tone="accent" icon={<ListChecks />} />
       </div>
 
@@ -152,7 +182,7 @@ function HealingPage() {
                 exit={{ opacity: 0, y: -4 }}
                 className="font-mono text-xs text-primary"
               >
-                › {USE_MOCK_DATA || phase !== "idle" ? phaseText[phase] : "Live view: isolated nodes are grey, with a broken red link to the controller."}
+                › {isMock || phase !== "idle" ? phaseText[phase] : "Live view: isolated nodes are grey, with a broken red link to the controller."}
               </motion.p>
             </AnimatePresence>
             <NetworkLegend />
@@ -202,7 +232,7 @@ function HealingPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-xs text-primary">{inc.id}</span>
                     <StatusBadge tone={incidentTone[inc.status]}>{inc.status}</StatusBadge>
-                    <span className="ml-auto font-mono text-[11px] text-muted-foreground">{fmtTime(inc.timestamp)} · {inc.durationSec}s</span>
+                    <span className="ml-auto font-mono text-[11px] text-muted-foreground">{fmtTime(inc.timestamp)} · {formatDuration(inc.durationSec)}</span>
                   </div>
                   <p className="mt-1 text-sm text-foreground">{inc.issue} <span className="text-muted-foreground">on {inc.node}</span></p>
                   <p className="text-xs text-muted-foreground">↳ {inc.action}</p>
