@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { API_BASE_URL, API_KEY, USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "./useLiveFeed";
+import { API_BASE_URL, API_KEY } from "@/services/api/config";
 import { wsUrl } from "./ws-url";
 
 /**
@@ -9,9 +10,10 @@ import { wsUrl } from "./ws-url";
  */
 export function LiveSync() {
   const queryClient = useQueryClient();
+  const { isLive } = useLiveFeed();
 
   useEffect(() => {
-    if (USE_MOCK_DATA) return;
+    if (!isLive) return;
     let socket: WebSocket | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let refreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -31,6 +33,7 @@ export function LiveSync() {
     };
 
     function connect() {
+      if (closed) return;
       try {
         socket = new WebSocket(wsUrl(API_BASE_URL, API_KEY));
       } catch {
@@ -42,6 +45,9 @@ export function LiveSync() {
         refresh();
       };
       socket.onmessage = refresh;
+      socket.onerror = () => {
+        // Handled silently; reconnect loop is triggered via onclose
+      };
       socket.onclose = () => {
         if (!closed) scheduleReconnect();
       };
@@ -52,9 +58,23 @@ export function LiveSync() {
       closed = true;
       clearTimeout(retryTimer);
       clearTimeout(refreshTimer);
-      socket?.close();
+      if (socket) {
+        socket.onmessage = null;
+        socket.onerror = null;
+        socket.onclose = null;
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.close(1000, "LiveSync unmounted");
+        } else if (socket.readyState === WebSocket.CONNECTING) {
+          // If still connecting, wait for open before closing to avoid browser abort warning
+          socket.onopen = () => {
+            try {
+              socket?.close(1000, "LiveSync unmounted");
+            } catch {}
+          };
+        }
+      }
     };
-  }, [queryClient]);
+  }, [queryClient, isLive]);
 
   return null;
 }

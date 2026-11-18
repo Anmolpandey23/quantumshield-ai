@@ -58,9 +58,20 @@ def _model_files() -> dict:
         if not p.exists():
             return {}
         data = json.loads(p.read_text())
-        f1 = (data.get("classifier") or {}).get("macro_f1_test_with_tabddpm")
-        return {"macro_f1": float(f1) if f1 is not None else None,
-                "trained_at": datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc).isoformat()}
+        lgb = data.get("lightgbm") or {}
+        rep = lgb.get("report") or {}
+        macro = rep.get("macro avg") or {}
+        accuracy = rep.get("accuracy")
+        precision = macro.get("precision")
+        recall = macro.get("recall")
+        macro_f1 = lgb.get("macro_f1") or macro.get("f1-score") or (data.get("classifier") or {}).get("macro_f1_test_with_tabddpm")
+        return {
+            "macro_f1": float(macro_f1) if macro_f1 is not None else None,
+            "accuracy": float(accuracy) if accuracy is not None else None,
+            "precision": float(precision) if precision is not None else None,
+            "recall": float(recall) if recall is not None else None,
+            "trained_at": datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc).isoformat(),
+        }
     except Exception:
         return {}
 
@@ -167,7 +178,7 @@ def threats(ctx: dict) -> dict:
         "version": "contract 1.0",
         "architecture": "TabDDPM + CPC Transformer + DyGNN + XAI" if real
         else "Rule-based simulator (train Stage 1 to use the real models)",
-        "accuracy": None, "precision": None, "recall": None,
+        "accuracy": mf.get("accuracy"), "precision": mf.get("precision"), "recall": mf.get("recall"),
         "macroF1": mf.get("macro_f1"),
         "lastTrained": mf.get("trained_at", ""),
     }

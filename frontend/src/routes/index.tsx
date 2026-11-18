@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Activity, AlertTriangle, ArrowRight, HeartPulse, KeyRound, Shield, Share2, Workflow } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, HeartPulse, KeyRound, Lock, RefreshCw, Shield, ShieldCheck, Share2, Workflow } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { axisProps, chartColors, HudTooltip } from "@/components/charts/chart-theme";
+import { DefensePerimeterRadar } from "@/components/defense/DefensePerimeterRadar";
 import { DemoBadge } from "@/components/hud/DemoBadge";
 import { GlassPanel } from "@/components/hud/GlassPanel";
 import { HudRing } from "@/components/hud/HudRing";
@@ -13,8 +14,8 @@ import { NetworkGraph, NetworkLegend } from "@/components/network/NetworkGraph";
 import { RunSimulationButton } from "@/components/simulation/RunSimulationButton";
 import { SimulationPipeline } from "@/components/simulation/SimulationPipeline";
 import { Button } from "@/components/ui/button";
-import { fmtTime } from "@/lib/format";
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
+import { fmtTime, formatDuration } from "@/lib/format";
 import { overviewQuery, topologyQuery } from "@/services/queries";
 
 export const Route = createFileRoute("/")({
@@ -39,6 +40,7 @@ const kpiIcons = [Shield, Activity, KeyRound, HeartPulse];
 function Overview() {
   const { data } = useSuspenseQuery(overviewQuery);
   const { data: topology } = useSuspenseQuery(topologyQuery);
+  const { isMock } = useLiveFeed();
 
   return (
     <div className="space-y-6">
@@ -65,6 +67,7 @@ function Overview() {
               QuantumShield AI predicts threats, enforces quantum-safe cryptography and repairs the network
               automatically. Run the end-to-end demo to walk through the full workflow.
             </p>
+
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <RunSimulationButton size="xl" />
               <Button variant="hud" size="xl" asChild>
@@ -74,21 +77,27 @@ function Overview() {
               </Button>
             </div>
           </div>
-          <div className="mx-auto">
-            <HudRing
-              value={data.postureScore}
-              label="Security posture"
-              size={260}
-              sublabel={
-                data.postureScore >= 80 ? (
-                  <StatusBadge tone="success" pulse>Protected</StatusBadge>
-                ) : data.postureScore >= 60 ? (
-                  <StatusBadge tone="warning" pulse>At risk</StatusBadge>
-                ) : (
-                  <StatusBadge tone="danger" pulse>Under attack</StatusBadge>
-                )
-              }
-            />
+          <div className="mx-auto flex justify-center">
+            <DefensePerimeterRadar
+              postureScore={data.postureScore}
+              isolatedCount={Number(data.kpis.find((k) => k.id === "health")?.hint?.match(/(\d+)\s+isolated/)?.[1] ?? 0)}
+              totalNodes={14}
+            >
+              <HudRing
+                value={data.postureScore}
+                label="Security posture"
+                size={260}
+                sublabel={
+                  data.postureScore >= 80 ? (
+                    <StatusBadge tone="success" pulse>Protected</StatusBadge>
+                  ) : data.postureScore >= 60 ? (
+                    <StatusBadge tone="warning" pulse>At risk</StatusBadge>
+                  ) : (
+                    <StatusBadge tone="danger" pulse>Under attack</StatusBadge>
+                  )
+                }
+              />
+            </DefensePerimeterRadar>
           </div>
         </div>
       </motion.section>
@@ -102,7 +111,7 @@ function Overview() {
               key={k.id}
               index={i}
               label={k.label}
-              value={k.value}
+              value={k.id === "mttr" ? formatDuration(k.value) : k.value}
               delta={k.delta}
               trend={k.trend}
               tone={k.tone}
@@ -126,8 +135,8 @@ function Overview() {
       <div className="grid gap-6 xl:grid-cols-5">
         <GlassPanel
           className="xl:col-span-3"
-          title={USE_MOCK_DATA ? "Network Traffic (24h)" : "Pipeline Activity"}
-          subtitle={USE_MOCK_DATA ? "Inbound / outbound Mbps with anomaly count" : "Per minute: nodes scored, secure channels built, threats flagged"}
+          title={isMock ? "Network Traffic (24h)" : "Pipeline Activity"}
+          subtitle={isMock ? "Inbound / outbound Mbps with anomaly count" : "Per minute: nodes scored, secure channels built, threats flagged"}
           icon={<Activity />}
           actions={<DemoBadge />}
         >
@@ -148,9 +157,9 @@ function Overview() {
                 <XAxis dataKey="time" {...axisProps} interval={3} />
                 <YAxis {...axisProps} />
                 <Tooltip content={<HudTooltip />} />
-                <Area type="monotone" dataKey="inbound" name={USE_MOCK_DATA ? "Inbound" : "Nodes scored"} stroke={chartColors.primary} fill="url(#g-in)" strokeWidth={2} />
-                <Area type="monotone" dataKey="outbound" name={USE_MOCK_DATA ? "Outbound" : "Secure channels"} stroke={chartColors.accent} fill="url(#g-out)" strokeWidth={2} />
-                <Area type="monotone" dataKey="anomalies" name={USE_MOCK_DATA ? "Anomalies" : "Threats flagged"} stroke={chartColors.danger} fill="none" strokeWidth={1.5} strokeDasharray="4 3" />
+                <Area type="monotone" dataKey="inbound" name={isMock ? "Inbound" : "Nodes scored"} stroke={chartColors.primary} fill="url(#g-in)" strokeWidth={2} />
+                <Area type="monotone" dataKey="outbound" name={isMock ? "Outbound" : "Secure channels"} stroke={chartColors.accent} fill="url(#g-out)" strokeWidth={2} />
+                <Area type="monotone" dataKey="anomalies" name={isMock ? "Anomalies" : "Threats flagged"} stroke={chartColors.danger} fill="none" strokeWidth={1.5} strokeDasharray="4 3" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

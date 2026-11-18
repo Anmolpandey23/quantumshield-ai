@@ -3,6 +3,7 @@
 jsonschema==4.26.0
 fastapi>=0.115
 uvicorn[standard]>=0.30
+websockets>=12.0
 httpx>=0.27
 pydantic>=2.6
 # Optional but recommended (real Stage 1 + Stage 3):  pip install -r ../stage1_ai_threat_prediction/requirements.txt

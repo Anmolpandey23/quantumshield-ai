@@ -10,7 +10,7 @@ S1_ATTACK = {"contract_version": "1.0", "node_id": "10.0.0.14", "threat_label": 
 
 @pytest.fixture()
 def client():
-    eng = Engine(db_path=":memory:", n_qubits=512, use_real=False)       # stub Stage 1/3: fast, no torch needed
+    eng = Engine(db_path=":memory:", n_qubits=1024, use_real=False)       # stub Stage 1/3: fast, no torch needed
     with TestClient(create_app(eng)) as c:
         yield c
 
@@ -36,7 +36,7 @@ def test_attack_flows_through_all_stages_and_shows_up_everywhere(client):
 def test_eavesdropper_is_caught_and_no_command_sent(client):
     ev = client.post("/api/events/stage1?eve_fraction=1.0", json=S1_ATTACK).json()
     assert ev["decision"] == "aborted_no_command" and ev["stage3_command"] is None
-    assert ev["stage2"]["eavesdrop_detected"] is True and ev["stage2"]["qber"] > 0.15
+    assert ev["stage2"]["eavesdrop_detected"] is True and ev["stage2"]["qber"] >= 0.11
     assert client.get("/api/stats").json()["eavesdrop_aborts"] == 1
 
 

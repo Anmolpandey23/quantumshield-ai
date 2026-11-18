@@ -1,4 +1,4 @@
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
 import { BrandMark } from "./BrandMark";
 import { SidebarNav } from "./SidebarNav";
 
@@ -19,16 +19,17 @@ export function AppSidebar() {
 }
 
 export function SidebarFooter() {
+  const { isLive } = useLiveFeed();
   return (
     <div className="m-3 rounded-lg border border-border bg-surface/60 p-3">
       <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Data source</p>
-      <p className="mt-1 text-xs text-foreground">
-        {USE_MOCK_DATA ? "Demo dataset (simulated)" : "FastAPI backend"}
+      <p className="mt-1 text-xs text-foreground font-medium">
+        {isLive ? "QuantumShield Core (Live)" : "Demo dataset (Simulated)"}
       </p>
       <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-        {USE_MOCK_DATA
-          ? "All figures shown are sample values for UI preview — not real security results."
-          : "Figures come from the QuantumShield pipeline events. Anything the pipeline cannot measure shows n/a."}
+        {isLive
+          ? "Live real-time telemetry from the active QuantumShield defense pipeline."
+          : "All figures shown are sample values for UI preview — not real security results."}
       </p>
     </div>
   );

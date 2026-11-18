@@ -1,6 +1,6 @@
 import { FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { USE_MOCK_DATA } from "@/services/api/config";
+import { useLiveFeed } from "@/features/live/useLiveFeed";
 
 /**
  * Marks any surface showing simulated / sample values.
@@ -8,7 +8,8 @@ import { USE_MOCK_DATA } from "@/services/api/config";
  * simulated even then, such as the Simulation Center and the browser-only demos).
  */
 export function DemoBadge({ className, label = "Demo data", always = false }: { className?: string; label?: string; always?: boolean }) {
-  if (!USE_MOCK_DATA && !always) return null;
+  const { isLive } = useLiveFeed();
+  if (isLive && !always) return null;
   return (
     <span
       title="Sample values for UI preview only — not real security results"

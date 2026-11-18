@@ -51,8 +51,10 @@ def create_app(engine: Engine | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        await eng.start_healing_watcher()
         yield
         await eng.stop_sim()
+        await eng.stop_healing_watcher()
 
     app = FastAPI(title="QuantumShield AI API", version="1.0.0", lifespan=lifespan)
     app.state.engine = eng
@@ -188,6 +190,23 @@ def create_app(engine: Engine | None = None) -> FastAPI:
     @app.get("/api/healing", dependencies=secured)
     def healing():
         return adapter.healing(snap())
+
+    @app.post("/api/healing/restore", dependencies=secured)
+    async def restore_isolated(node_id: str | None = None):
+        """Restore quarantined nodes by sending clean traffic steps to satisfy cooldown and trigger PQC reconnection."""
+        if node_id:
+            targets = [node_id] if eng.orch.status.get(node_id) == "isolated" else []
+        else:
+            targets = [n for n, st in eng.orch.status.items() if st == "isolated"]
+        reconnected = []
+        for n in targets:
+            for _ in range(3):
+                ev = await run_in_threadpool(eng.scenario, "clean", n)
+                if ev.get("decision") == "command_issued" and ev.get("node_status") == "online":
+                    reconnected.append(n)
+                    break
+        await eng.broadcast(None)
+        return {"reconnected": reconnected, "remaining_isolated": sum(1 for st in eng.orch.status.values() if st == "isolated")}
 
     @app.get("/api/topology", dependencies=secured)
     def topology():
